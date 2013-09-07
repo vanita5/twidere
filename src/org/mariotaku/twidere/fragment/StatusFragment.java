@@ -56,6 +56,7 @@ import org.mariotaku.twidere.adapter.PreviewPagerAdapter;
 import org.mariotaku.twidere.adapter.PreviewPagerAdapter.OnImageClickListener;
 import org.mariotaku.twidere.adapter.iface.IStatusesAdapter;
 import org.mariotaku.twidere.app.TwidereApplication;
+import org.mariotaku.twidere.loader.DummyParcelableStatusesLoader;
 import org.mariotaku.twidere.model.Panes;
 import org.mariotaku.twidere.model.ParcelableLocation;
 import org.mariotaku.twidere.model.ParcelableStatus;
@@ -123,22 +124,21 @@ public class StatusFragment extends ParcelableStatusesListFragment implements On
 	private static final int LOADER_ID_STATUS = 1;
 	private static final int LOADER_ID_FOLLOW = 2;
 	private static final int LOADER_ID_LOCATION = 3;
-
 	private long mAccountId, mStatusId;
 	private ParcelableStatus mStatus;
-
 	private boolean mLoadMoreAutomatically;
+
 	private boolean mFollowInfoDisplayed, mLocationInfoDisplayed;
 	private boolean mStatusLoaderInitialized, mLocationLoaderInitialized;
-	private boolean mFollowInfoLoaderInitialized;;
-	private boolean mShouldScroll;
-
+	private boolean mFollowInfoLoaderInitialized;
+	private boolean mShouldScroll;;
 	private SharedPreferences mPreferences;
+
 	private AsyncTwitterWrapper mTwitterWrapper;
 	private ImageLoaderWrapper mProfileImageLoader;
-
 	private TextView mNameView, mScreenNameView, mTextView, mTimeAndSourceView, mInReplyToView, mLocationView,
 			mRetweetedStatusView;
+
 	private ImageView mProfileImageView;
 	private Button mFollowButton;
 	private View mMainContent, mFollowIndicator, mImagePreviewContainer;
@@ -150,7 +150,6 @@ public class StatusFragment extends ParcelableStatusesListFragment implements On
 	private View mLoadImagesIndicator;
 	private ExtendedFrameLayout mStatusContainer;
 	private ListView mListView;
-
 	private PreviewPagerAdapter mImagePreviewAdapter;
 
 	private LoadConversationTask mConversationTask;
@@ -370,20 +369,14 @@ public class StatusFragment extends ParcelableStatusesListFragment implements On
 		public void onSizeChanged(final View view, final int w, final int h, final int oldw, final int oldh) {
 			if (getActivity() == null) return;
 			final float density = getResources().getDisplayMetrics().density;
-			final ViewGroup.LayoutParams lp = mStatusView.getLayoutParams();
-			if (lp != null) {
-				lp.height = h - (int) (density * 2);
-				mStatusView.setLayoutParams(lp);
-			} else {
-				mStatusView.setMinimumHeight(h - (int) (density * 2));
-			}
+			mStatusView.setMinimumHeight(h - (int) (density * 2));
 		}
 
 	};
 
 	public void displayStatus(final ParcelableStatus status) {
 		onRefreshComplete();
-		updatePullRefresh();
+		updateConversationInfo();
 		final boolean status_unchanged = mStatus != null && status != null && status.equals(mStatus);
 		if (!status_unchanged) {
 			getListAdapter().setData(null);
@@ -494,7 +487,7 @@ public class StatusFragment extends ParcelableStatusesListFragment implements On
 
 	@Override
 	public Loader<List<ParcelableStatus>> newLoaderInstance(final Context context, final Bundle args) {
-		return null;
+		return new DummyParcelableStatusesLoader(getActivity(), getData());
 	}
 
 	@Override
@@ -655,6 +648,11 @@ public class StatusFragment extends ParcelableStatusesListFragment implements On
 	}
 
 	@Override
+	public void onScroll(final AbsListView view, final int firstVisibleItem, final int visibleItemCount,
+			final int totalItemCount) {
+	}
+
+	@Override
 	public void onScrollStateChanged(final AbsListView view, final int scrollState) {
 		super.onScrollStateChanged(view, scrollState);
 		mShouldScroll = false;
@@ -693,6 +691,17 @@ public class StatusFragment extends ParcelableStatusesListFragment implements On
 	@Override
 	protected void setListHeaderFooters(final ListView list) {
 		list.addFooterView(mStatusView);
+	}
+
+	private void addConversationStatus(final ParcelableStatus status) {
+		final List<ParcelableStatus> data = getData();
+		data.add(status);
+		final ParcelableStatusesAdapter adapter = (ParcelableStatusesAdapter) getListAdapter();
+		adapter.setData(data);
+		adapter.sort(ParcelableStatus.REVERSE_ID_COMPARATOR);
+		if (!mLoadMoreAutomatically && mShouldScroll) {
+			setSelection(0 + mListView.getHeaderViewsCount());
+		}
 	}
 
 	private void clearPreviewImages() {
@@ -766,7 +775,7 @@ public class StatusFragment extends ParcelableStatusesListFragment implements On
 		}
 	}
 
-	private void updatePullRefresh() {
+	private void updateConversationInfo() {
 		final boolean has_converstion = mStatus != null && mStatus.in_reply_to_status_id > 0;
 		final IStatusesAdapter<List<ParcelableStatus>> adapter = getListAdapter();
 		final boolean load_not_finished = adapter.getCount() > 0 && adapter.getStatus(0).in_reply_to_status_id > 0;
@@ -816,13 +825,13 @@ public class StatusFragment extends ParcelableStatusesListFragment implements On
 		@Override
 		protected void onCancelled() {
 			fragment.setProgressBarIndeterminateVisibility(false);
-			fragment.updatePullRefresh();
+			fragment.updateConversationInfo();
 		}
 
 		@Override
 		protected void onPostExecute(final Response<Boolean> data) {
 			fragment.setProgressBarIndeterminateVisibility(false);
-			fragment.updatePullRefresh();
+			fragment.updateConversationInfo();
 			if (data == null || data.value == null || !data.value) {
 				showErrorMessage(context, context.getString(R.string.getting_status), data.exception, true);
 			}
@@ -831,7 +840,7 @@ public class StatusFragment extends ParcelableStatusesListFragment implements On
 		@Override
 		protected void onPreExecute() {
 			fragment.setProgressBarIndeterminateVisibility(true);
-			fragment.updatePullRefresh();
+			fragment.updateConversationInfo();
 		}
 
 		class AddStatusRunnable implements Runnable {
@@ -844,12 +853,7 @@ public class StatusFragment extends ParcelableStatusesListFragment implements On
 
 			@Override
 			public void run() {
-				final ParcelableStatusesAdapter adapter = (ParcelableStatusesAdapter) fragment.getListAdapter();
-				adapter.add(status);
-				adapter.sort(ParcelableStatus.REVERSE_ID_COMPARATOR);
-				if (!fragment.mLoadMoreAutomatically && fragment.mShouldScroll) {
-					fragment.mListView.setSelection(0 + fragment.mListView.getHeaderViewsCount());
-				}
+				fragment.addConversationStatus(status);
 			}
 		}
 	}

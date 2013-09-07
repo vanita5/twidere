@@ -57,8 +57,7 @@ public interface Constants {
 	public static final String TWITTER_CONSUMER_KEY_2 = "UyaS0xmUQXKiJ48vZP4dXQ";
 	public static final String TWITTER_CONSUMER_SECRET_2 = "QlYVMWA751Dl5yNve41CNEN46GV4nxk57FmLeAXAV0";
 
-	public static final String GOOGLE_MAPS_API_KEY_RELEASE = "0kjPwJOe_zwYjzGc9uYak7vhm_Sf3eob-2L3Xzw";
-	public static final String GOOGLE_MAPS_API_KEY_DEBUG = "0kjPwJOe_zwY9p6kT-kygu4mxwysyOOpfkaXqTA";
+	public static final String GOOGLE_MAPS_API_KEY = "0kjPwJOe_zwYjzGc9uYak7vhm_Sf3eob-2L3Xzw";
 
 	public static final String SCHEME_HTTP = "http";
 	public static final String SCHEME_HTTPS = "https";

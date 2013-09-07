@@ -158,8 +158,7 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 						old_count = 0;
 				}
 				mDatabase.beginTransaction();
-				final boolean replace_on_conflict = table_id == TABLE_ID_CACHED_HASHTAGS
-						|| table_id == TABLE_ID_CACHED_STATUSES || table_id == TABLE_ID_CACHED_USERS;
+				final boolean replace_on_conflict = shouldReplaceOnConflict(table_id);
 				for (final ContentValues contentValues : values) {
 					if (replace_on_conflict) {
 						insertWithOnConflict(mDatabase, table, null, contentValues, SQLiteDatabase.CONFLICT_REPLACE);
@@ -187,7 +186,7 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 		} catch (final SQLException e) {
 			throw new IllegalStateException(e);
 		}
-	};
+	}
 
 	@Override
 	public int delete(final Uri uri, final String selection, final String[] selectionArgs) {
@@ -216,13 +215,14 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 		} catch (final SQLException e) {
 			throw new IllegalStateException(e);
 		}
-	}
+	};
 
 	@Override
 	public String getType(final Uri uri) {
 		return null;
 	}
 
+	@SuppressLint("InlinedApi")
 	@Override
 	public Uri insert(final Uri uri, final ContentValues values) {
 		try {
@@ -236,7 +236,13 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 					return null;
 			}
 			if (table == null) return null;
-			final long row_id = mDatabase.insert(table, null, values);
+			final boolean replace_on_conflict = shouldReplaceOnConflict(table_id);
+			final long row_id;
+			if (replace_on_conflict) {
+				row_id = insertWithOnConflict(mDatabase, table, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+			} else {
+				row_id = mDatabase.insert(table, null, values);
+			}
 			if (!"false".equals(uri.getQueryParameter(QUERY_PARAM_NOTIFY))) {
 				switch (getTableId(uri)) {
 					case TABLE_ID_STATUSES: {
@@ -938,14 +944,28 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 		return Preferences.TYPE_INVALID;
 	}
 
+	private static <T> T safeGet(final List<T> list, final int index) {
+		return index >= 0 && index < list.size() ? list.get(index) : null;
+	}
+
+	private static boolean shouldReplaceOnConflict(final int table_id) {
+		switch (table_id) {
+			case TABLE_ID_CACHED_HASHTAGS:
+			case TABLE_ID_CACHED_STATUSES:
+			case TABLE_ID_CACHED_USERS:
+			case TABLE_ID_FILTERED_USERS:
+			case TABLE_ID_FILTERED_KEYWORDS:
+			case TABLE_ID_FILTERED_SOURCES:
+			case TABLE_ID_FILTERED_LINKS:
+				return true;
+		}
+		return false;
+	}
+
 	private static String stripMentionText(final String text, final String my_screen_name) {
 		if (text == null || my_screen_name == null) return text;
 		final String temp = "@" + my_screen_name + " ";
 		if (text.startsWith(temp)) return text.substring(temp.length());
 		return text;
-	}
-
-	private static <T> T safeGet(List<T> list, int index) {
-		return index >= 0 && index < list.size() ? list.get(index) : null;
 	}
 }

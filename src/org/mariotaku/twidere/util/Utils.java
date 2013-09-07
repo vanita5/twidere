@@ -57,6 +57,7 @@ import org.apache.http.NameValuePair;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.mariotaku.gallery3d.app.ImageViewerGLActivity;
+import org.mariotaku.twidere.BuildConfig;
 import org.mariotaku.twidere.Constants;
 import org.mariotaku.twidere.R;
 import org.mariotaku.twidere.activity.CameraCropActivity;
@@ -230,7 +231,8 @@ public final class Utils implements Constants {
 		CONTENT_PROVIDER_URI_MATCHER.addURI(TweetStore.AUTHORITY, TABLE_CACHED_STATUSES, TABLE_ID_CACHED_STATUSES);
 		CONTENT_PROVIDER_URI_MATCHER.addURI(TweetStore.AUTHORITY, TABLE_CACHED_HASHTAGS, TABLE_ID_CACHED_HASHTAGS);
 		CONTENT_PROVIDER_URI_MATCHER.addURI(TweetStore.AUTHORITY, TABLE_CACHED_HASHTAGS, TABLE_ID_CACHED_HASHTAGS);
-		CONTENT_PROVIDER_URI_MATCHER.addURI(TweetStore.AUTHORITY, TABLE_NOTIFICATIONS + "/#", VIRTUAL_TABLE_ID_NOTIFICATIONS);
+		CONTENT_PROVIDER_URI_MATCHER.addURI(TweetStore.AUTHORITY, TABLE_NOTIFICATIONS + "/#",
+				VIRTUAL_TABLE_ID_NOTIFICATIONS);
 		CONTENT_PROVIDER_URI_MATCHER.addURI(TweetStore.AUTHORITY, TABLE_NOTIFICATIONS, VIRTUAL_TABLE_ID_NOTIFICATIONS);
 		CONTENT_PROVIDER_URI_MATCHER.addURI(TweetStore.AUTHORITY, TABLE_PERMISSIONS, VIRTUAL_TABLE_ID_PERMISSIONS);
 		CONTENT_PROVIDER_URI_MATCHER.addURI(TweetStore.AUTHORITY, TABLE_DNS + "/*", VIRTUAL_TABLE_ID_DNS);
@@ -309,11 +311,11 @@ public final class Utils implements Constants {
 		CUSTOM_TABS_ICON_NAME_MAP.put(ICON_SPECIAL_TYPE_CUSTOMIZE, -1);
 
 	}
-
 	private static Map<Long, Integer> sAccountColors = new LinkedHashMap<Long, Integer>();
-	private static Map<Long, Integer> sUserColors = new LinkedHashMap<Long, Integer>(512, 0.75f, true);
 
+	private static Map<Long, Integer> sUserColors = new LinkedHashMap<Long, Integer>(512, 0.75f, true);
 	private static Map<Long, String> sAccountScreenNames = new LinkedHashMap<Long, String>();
+
 	private static Map<Long, String> sAccountNames = new LinkedHashMap<Long, String>();
 
 	private Utils() {
@@ -1892,6 +1894,10 @@ public final class Utils implements Constants {
 		final float level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
 		final float scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
 		return plugged || level / scale > 0.15f;
+	}
+
+	public static boolean isDebugBuild() {
+		return BuildConfig.DEBUG;
 	}
 
 	public static boolean isDebuggable(final Context context) {

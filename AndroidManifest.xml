@@ -52,21 +52,6 @@
 		-->
 
 		<meta-data
-			android:name="com.sec.android.support.multiwindow"
-			android:value="true"/>
-		<meta-data
-			android:name="com.sec.android.multiwindow.DEFAULT_SIZE_W"
-			android:value="480dp"/>
-		<meta-data
-			android:name="com.sec.android.multiwindow.DEFAULT_SIZE_H"
-			android:value="640dp"/>
-		<meta-data
-			android:name="com.sec.android.multiwindow.MINIMUM_SIZE_W"
-			android:value="240dp"/>
-		<meta-data
-			android:name="com.sec.android.multiwindow.MINIMUM_SIZE_H"
-			android:value="320dp"/>
-		<meta-data
 			android:name="com.google.android.backup.api_key"
 			android:value="AEdPqrEAAAAIKbKATV1AGbLB4kem3w8QaPVJSPVVumbMHxkfwA"/>
 

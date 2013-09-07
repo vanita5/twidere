@@ -58,7 +58,7 @@
 			<ImageButton
 				android:id="@+id/center"
 				style="@style/Widget.ActionBarItem"
-				android:layout_width="wrap_content"
+				android:layout_width="@dimen/actionbar_button_width"
 				android:layout_height="match_parent"
 				android:onClick="onClick"
 				android:src="@drawable/ic_menu_mylocation"/>

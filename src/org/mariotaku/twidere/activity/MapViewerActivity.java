@@ -19,6 +19,10 @@
 
 package org.mariotaku.twidere.activity;
 
+import static org.mariotaku.twidere.util.Utils.isDebugBuild;
+
+import me.imid.swipebacklayout.lib.app.SwipeBackActivity;
+
 import org.mariotaku.twidere.Constants;
 import org.mariotaku.twidere.R;
 import org.mariotaku.twidere.fragment.NativeMapFragment;
@@ -28,12 +32,11 @@ import org.mariotaku.twidere.util.MapInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentTransaction;
 import android.view.View;
 import android.view.View.OnClickListener;
 
-public class MapViewerActivity extends FragmentActivity implements Constants, OnClickListener {
+public class MapViewerActivity extends SwipeBackActivity implements Constants, OnClickListener {
 
 	@Override
 	public void onClick(final View view) {
@@ -77,7 +80,7 @@ public class MapViewerActivity extends FragmentActivity implements Constants, On
 			finish();
 			return;
 		}
-		final Fragment fragment = isNativeMapSupported() ? new NativeMapFragment() : new WebMapFragment();
+		final Fragment fragment = isNativeMapSupported() && !isDebugBuild() ? new NativeMapFragment() : new WebMapFragment();
 		fragment.setArguments(bundle);
 		final FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
 		ft.replace(R.id.map_frame, fragment).commit();
