@@ -41,6 +41,7 @@ import org.mariotaku.twidere.fragment.MentionsFragment;
 import org.mariotaku.twidere.fragment.TrendsFragment;
 import org.mariotaku.twidere.model.TabSpec;
 import org.mariotaku.twidere.preference.ThemeColorPreference;
+import org.mariotaku.twidere.provider.RecentSearchProvider;
 import org.mariotaku.twidere.util.ActivityAccessor;
 import org.mariotaku.twidere.util.ArrayUtils;
 import org.mariotaku.twidere.util.AsyncTwitterWrapper;
@@ -59,6 +60,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.Bundle;
+import android.provider.SearchRecentSuggestions;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentManagerTrojan;
@@ -475,6 +477,11 @@ public class HomeActivity extends DualPaneActivity implements OnClickListener, O
 		final String action = intent.getAction();
 		if (Intent.ACTION_SEARCH.equals(action)) {
 			final String query = intent.getStringExtra(SearchManager.QUERY);
+			if (first_create) {
+				final SearchRecentSuggestions suggestions = new SearchRecentSuggestions(this,
+						RecentSearchProvider.AUTHORITY, RecentSearchProvider.MODE);
+				suggestions.saveRecentQuery(query, null);
+			}
 			final long account_id = getDefaultAccountId(this);
 			openSearch(this, account_id, query);
 			return -1;

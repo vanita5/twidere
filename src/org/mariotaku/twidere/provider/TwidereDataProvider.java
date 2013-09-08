@@ -95,6 +95,7 @@ import android.text.Html;
 public final class TwidereDataProvider extends ContentProvider implements Constants {
 
 	private Context mContext;
+	private Resources mResources;
 
 	private SQLiteDatabase mDatabase;
 	private PermissionsManager mPermissionsManager;
@@ -115,7 +116,6 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 	private final List<Long> mNewMessageAccounts = Collections.synchronizedList(new NoDuplicatesArrayList<Long>());
 
 	private boolean mNotificationIsAudible;
-
 	private final BroadcastReceiver mHomeActivityStateReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(final Context context, final Intent intent) {
@@ -215,12 +215,12 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 		} catch (final SQLException e) {
 			throw new IllegalStateException(e);
 		}
-	};
+	}
 
 	@Override
 	public String getType(final Uri uri) {
 		return null;
-	}
+	};
 
 	@SuppressLint("InlinedApi")
 	@Override
@@ -263,6 +263,7 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 	@Override
 	public boolean onCreate() {
 		mContext = getContext();
+		mResources = mContext.getResources();
 		final TwidereApplication app = TwidereApplication.getInstance(mContext);
 		mDatabase = app.getSQLiteDatabase();
 		mHostAddressResolver = app.getHostAddressResolver();
@@ -392,7 +393,6 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 	private void buildNotification(final NotificationCompat.Builder builder, final String ticker, final String title,
 			final String message, final int icon, final Bitmap large_icon, final Intent content_intent,
 			final Intent delete_intent) {
-		final Context context = getContext();
 		builder.setTicker(ticker);
 		builder.setContentTitle(title);
 		builder.setContentText(message);
@@ -403,15 +403,15 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 			builder.setLargeIcon(large_icon);
 		}
 		if (delete_intent != null) {
-			builder.setDeleteIntent(PendingIntent.getBroadcast(context, 0, delete_intent,
+			builder.setDeleteIntent(PendingIntent.getBroadcast(mContext, 0, delete_intent,
 					PendingIntent.FLAG_UPDATE_CURRENT));
 		}
 		if (content_intent != null) {
-			builder.setContentIntent(PendingIntent.getActivity(context, 0, content_intent,
+			builder.setContentIntent(PendingIntent.getActivity(mContext, 0, content_intent,
 					PendingIntent.FLAG_UPDATE_CURRENT));
 		}
 		int defaults = 0;
-		if (mNotificationIsAudible && !isNotificationsSilent(context)) {
+		if (mNotificationIsAudible && !isNotificationsSilent(mContext)) {
 			if (mPreferences.getBoolean(PREFERENCE_KEY_NOTIFICATION_HAVE_SOUND, false)) {
 				final Uri def_ringtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 				final String path = mPreferences.getString(PREFERENCE_KEY_NOTIFICATION_RINGTONE, "");
@@ -422,7 +422,7 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 			}
 		}
 		if (mPreferences.getBoolean(PREFERENCE_KEY_NOTIFICATION_HAVE_LIGHTS, false)) {
-			final int color_def = context.getResources().getColor(R.color.holo_blue_dark);
+			final int color_def = mResources.getColor(R.color.holo_blue_dark);
 			final int color = mPreferences.getInt(PREFERENCE_KEY_NOTIFICATION_LIGHT_COLOR, color_def);
 			builder.setLights(color, 1000, 2000);
 		}
@@ -547,11 +547,9 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 	}
 
 	private void displayMentionsNotification(final Context context, final ContentValues[] values) {
-		final Resources res = context.getResources();
 		final NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
 		final boolean display_screen_name = NAME_DISPLAY_OPTION_SCREEN_NAME.equals(mPreferences.getString(
 				PREFERENCE_KEY_NAME_DISPLAY_OPTION, NAME_DISPLAY_OPTION_BOTH));
-		final boolean display_hires_profile_image = res.getBoolean(R.bool.hires_profile_image);
 		final Intent delete_intent = new Intent(BROADCAST_NOTIFICATION_CLEARED);
 		final Bundle delete_extras = new Bundle();
 		delete_extras.putInt(INTENT_KEY_NOTIFICATION_ID, NOTIFICATION_ID_MENTIONS);
@@ -593,23 +591,13 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 		content_intent.putExtras(content_extras);
 
 		if (screen_names_size > 1) {
-			title = res.getString(R.string.notification_mention_multiple, display_screen_name ? "@"
+			title = mResources.getString(R.string.notification_mention_multiple, display_screen_name ? "@"
 					+ status.user_screen_name : status.user_name, screen_names_size - 1);
 		} else {
-			title = res.getString(R.string.notification_mention, display_screen_name ? "@" + status.user_screen_name
-					: status.user_name);
+			title = mResources.getString(R.string.notification_mention, display_screen_name ? "@"
+					+ status.user_screen_name : status.user_name);
 		}
-		final String profile_image_url_string = status.user_profile_image_url;
-		final File profile_image_file = mImagePreloader
-				.getCachedImageFile(display_hires_profile_image ? getBiggerTwitterProfileImage(profile_image_url_string)
-						: profile_image_url_string);
-		final int w = res.getDimensionPixelSize(R.dimen.notification_large_icon_width);
-		final int h = res.getDimensionPixelSize(R.dimen.notification_large_icon_height);
-		final Bitmap profile_image = profile_image_file != null && profile_image_file.isFile() ? BitmapFactory
-				.decodeFile(profile_image_file.getPath()) : null;
-		final Bitmap profile_image_fallback = BitmapFactory.decodeResource(res, R.drawable.ic_profile_image_default);
-		builder.setLargeIcon(Bitmap.createScaledBitmap(profile_image != null ? profile_image : profile_image_fallback,
-				w, h, true));
+		builder.setLargeIcon(getProfileImageForNotification(status.user_profile_image_url));
 		buildNotification(builder, title, title, status.text_plain, R.drawable.ic_stat_mention, null, content_intent,
 				delete_intent);
 		if (mNewMentions.isEmpty()) return;
@@ -657,11 +645,9 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 	}
 
 	private void displayMessagesNotification(final Context context, final ContentValues[] values) {
-		final Resources res = context.getResources();
 		final NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
 		final boolean display_screen_name = NAME_DISPLAY_OPTION_SCREEN_NAME.equals(mPreferences.getString(
 				PREFERENCE_KEY_NAME_DISPLAY_OPTION, NAME_DISPLAY_OPTION_BOTH));
-		final boolean display_hires_profile_image = res.getBoolean(R.bool.hires_profile_image);
 		final Intent delete_intent = new Intent(BROADCAST_NOTIFICATION_CLEARED);
 		final Bundle delete_extras = new Bundle();
 		delete_extras.putInt(INTENT_KEY_NOTIFICATION_ID, NOTIFICATION_ID_DIRECT_MESSAGES);
@@ -704,24 +690,14 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 		content_intent.putExtras(content_extras);
 
 		if (screen_names_size > 1) {
-			title = res.getString(R.string.notification_direct_message_multiple, display_screen_name ? "@"
+			title = mResources.getString(R.string.notification_direct_message_multiple, display_screen_name ? "@"
 					+ message.sender_screen_name : message.sender_name, screen_names_size - 1);
 		} else {
-			title = res.getString(R.string.notification_direct_message, display_screen_name ? "@"
+			title = mResources.getString(R.string.notification_direct_message, display_screen_name ? "@"
 					+ message.sender_screen_name : message.sender_name);
 		}
 		final String text_plain = message.text_plain;
-		final String profile_image_url_string = message.sender_profile_image_url;
-		final File profile_image_file = mImagePreloader
-				.getCachedImageFile(display_hires_profile_image ? getBiggerTwitterProfileImage(profile_image_url_string)
-						: profile_image_url_string);
-		final int w = res.getDimensionPixelSize(R.dimen.notification_large_icon_width);
-		final int h = res.getDimensionPixelSize(R.dimen.notification_large_icon_height);
-		final Bitmap profile_image = profile_image_file != null && profile_image_file.isFile() ? BitmapFactory
-				.decodeFile(profile_image_file.getPath()) : null;
-		final Bitmap profile_image_fallback = BitmapFactory.decodeResource(res, R.drawable.ic_profile_image_default);
-		builder.setLargeIcon(Bitmap.createScaledBitmap(profile_image != null ? profile_image : profile_image_fallback,
-				w, h, true));
+		builder.setLargeIcon(getProfileImageForNotification(message.sender_profile_image_url));
 		buildNotification(builder, title, title, text_plain, R.drawable.ic_stat_direct_message, null, content_intent,
 				delete_intent);
 		final StringBuilder summary = new StringBuilder();
@@ -795,73 +771,85 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 		return c;
 	}
 
+	private Bitmap getProfileImageForNotification(final String profile_image_url) {
+		final boolean hires_profile_image = mResources.getBoolean(R.bool.hires_profile_image);
+		final int w = mResources.getDimensionPixelSize(R.dimen.notification_large_icon_width);
+		final int h = mResources.getDimensionPixelSize(R.dimen.notification_large_icon_height);
+		final File profile_image_file = mImagePreloader
+				.getCachedImageFile(hires_profile_image ? getBiggerTwitterProfileImage(profile_image_url)
+						: profile_image_url);
+		final Bitmap profile_image = profile_image_file != null && profile_image_file.isFile() ? BitmapFactory
+				.decodeFile(profile_image_file.getPath()) : null;
+		if (profile_image != null) return Bitmap.createScaledBitmap(profile_image, w, h, true);
+		return Bitmap.createScaledBitmap(BitmapFactory.decodeResource(mResources, R.drawable.ic_profile_image_default),
+				w, h, true);
+	}
+
 	private void onDatabaseUpdated(final Uri uri) {
 		if (uri == null) return;
 		if ("false".equals(uri.getQueryParameter(QUERY_PARAM_NOTIFY))) return;
-		final Context context = getContext();
 		switch (getTableId(uri)) {
 			case TABLE_ID_ACCOUNTS: {
 				clearAccountColor();
 				clearAccountName();
-				context.sendBroadcast(new Intent(BROADCAST_ACCOUNT_LIST_DATABASE_UPDATED));
+				mContext.sendBroadcast(new Intent(BROADCAST_ACCOUNT_LIST_DATABASE_UPDATED));
 				break;
 			}
 			case TABLE_ID_DRAFTS: {
-				context.sendBroadcast(new Intent(BROADCAST_DRAFTS_DATABASE_UPDATED));
+				mContext.sendBroadcast(new Intent(BROADCAST_DRAFTS_DATABASE_UPDATED));
 				break;
 			}
 			case TABLE_ID_STATUSES:
 			case TABLE_ID_MENTIONS:
 			case TABLE_ID_DIRECT_MESSAGES_INBOX:
 			case TABLE_ID_DIRECT_MESSAGES_OUTBOX: {
-				notifyForUpdatedUri(context, uri);
+				notifyForUpdatedUri(mContext, uri);
 				break;
 			}
 			case TABLE_ID_TRENDS_LOCAL: {
-				context.sendBroadcast(new Intent(BROADCAST_TRENDS_UPDATED));
+				mContext.sendBroadcast(new Intent(BROADCAST_TRENDS_UPDATED));
 				break;
 			}
 			case TABLE_ID_TABS: {
-				context.sendBroadcast(new Intent(BROADCAST_TABS_UPDATED));
+				mContext.sendBroadcast(new Intent(BROADCAST_TABS_UPDATED));
 				break;
 			}
 			case TABLE_ID_FILTERED_LINKS:
 			case TABLE_ID_FILTERED_USERS:
 			case TABLE_ID_FILTERED_KEYWORDS:
 			case TABLE_ID_FILTERED_SOURCES: {
-				context.sendBroadcast(new Intent(BROADCAST_FILTERS_UPDATED));
+				mContext.sendBroadcast(new Intent(BROADCAST_FILTERS_UPDATED));
 				break;
 			}
 			default:
 				return;
 		}
-		context.sendBroadcast(new Intent(BROADCAST_DATABASE_UPDATED));
+		mContext.sendBroadcast(new Intent(BROADCAST_DATABASE_UPDATED));
 	}
 
 	private void onNewItemsInserted(final Uri uri, final ContentValues... values) {
 		if (uri == null || values == null || values.length == 0) return;
 		preloadImages(values);
 		if ("false".equals(uri.getQueryParameter(QUERY_PARAM_NOTIFY))) return;
-		final Context context = getContext();
-		final Resources res = context.getResources();
-		final NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
+		final NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext);
 		switch (getTableId(uri)) {
 			case TABLE_ID_STATUSES: {
 				if (!mPreferences.getBoolean(PREFERENCE_KEY_NOTIFICATION_ENABLE_HOME_TIMELINE,
 						NotificationContentPreference.DEFAULT_ENABLE_HOME_TTMELINE)) return;
-				final String message = res.getQuantityString(R.plurals.Ntweets, mNewStatusesCount, mNewStatusesCount);
+				final String message = mResources.getQuantityString(R.plurals.Ntweets, mNewStatusesCount,
+						mNewStatusesCount);
 				final Intent delete_intent = new Intent(BROADCAST_NOTIFICATION_CLEARED);
 				final Bundle delete_extras = new Bundle();
 				delete_extras.putInt(INTENT_KEY_NOTIFICATION_ID, NOTIFICATION_ID_HOME_TIMELINE);
 				delete_intent.putExtras(delete_extras);
-				final Intent content_intent = new Intent(context, HomeActivity.class);
+				final Intent content_intent = new Intent(mContext, HomeActivity.class);
 				content_intent.setAction(Intent.ACTION_MAIN);
 				content_intent.addCategory(Intent.CATEGORY_LAUNCHER);
 				final Bundle content_extras = new Bundle();
 				content_extras.putInt(INTENT_KEY_INITIAL_TAB, HomeActivity.TAB_POSITION_HOME);
 				content_intent.putExtras(content_extras);
 				builder.setOnlyAlertOnce(true);
-				buildNotification(builder, res.getString(R.string.new_notifications), message, message,
+				buildNotification(builder, mResources.getString(R.string.new_notifications), message, message,
 						R.drawable.ic_stat_tweet, null, content_intent, delete_intent);
 				mNotificationManager.notify(NOTIFICATION_ID_HOME_TIMELINE, builder.build());
 				break;
@@ -869,14 +857,14 @@ public final class TwidereDataProvider extends ContentProvider implements Consta
 			case TABLE_ID_MENTIONS: {
 				if (mPreferences.getBoolean(PREFERENCE_KEY_NOTIFICATION_ENABLE_MENTIONS,
 						NotificationContentPreference.DEFAULT_ENABLE_MENTIONS)) {
-					displayMentionsNotification(context, values);
+					displayMentionsNotification(mContext, values);
 				}
 				break;
 			}
 			case TABLE_ID_DIRECT_MESSAGES_INBOX: {
 				if (mPreferences.getBoolean(PREFERENCE_KEY_NOTIFICATION_ENABLE_DIRECT_MESSAGES,
 						NotificationContentPreference.DEFAULT_ENABLE_DIRECT_MESSAGES)) {
-					displayMessagesNotification(context, values);
+					displayMessagesNotification(mContext, values);
 				}
 				break;
 			}

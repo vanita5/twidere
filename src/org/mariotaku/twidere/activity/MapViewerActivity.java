@@ -61,6 +61,7 @@ public class MapViewerActivity extends SwipeBackActivity implements Constants, O
 	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.map_viewer);
+		setOverrideExitAniamtion(false);
 		final Uri uri = getIntent().getData();
 		if (uri == null || !AUTHORITY_MAP.equals(uri.getAuthority())) {
 			finish();

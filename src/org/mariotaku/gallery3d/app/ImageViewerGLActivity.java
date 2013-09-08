@@ -291,6 +291,7 @@ public final class ImageViewerGLActivity extends SwipeBackActivity implements Co
 	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.image_viewer_gl);
+		setOverrideExitAniamtion(false);
 		mHandler = new MyHandler(this);
 		mPhotoView = new PhotoView(this);
 		mPhotoView.setListener(this);

@@ -108,6 +108,7 @@ public class LinkHandlerActivity extends TwidereSwipeBackActivity {
 		mMultiSelectHandler.dispatchOnCreate();
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.link_handler);
+		setOverrideExitAniamtion(false);
 		mActionBar = getSupportActionBar();
 		mActionBar.setDisplayHomeAsUpEnabled(true);
 		setSupportProgressBarIndeterminateVisibility(false);

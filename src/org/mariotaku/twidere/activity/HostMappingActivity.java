@@ -24,6 +24,7 @@ import static android.text.TextUtils.isEmpty;
 import java.util.Map;
 
 import org.mariotaku.twidere.R;
+import org.mariotaku.twidere.adapter.ArrayAdapter;
 import org.mariotaku.twidere.fragment.BaseDialogFragment;
 import org.mariotaku.twidere.fragment.ProgressDialogFragment;
 import org.mariotaku.twidere.util.AsyncTask;
@@ -50,7 +51,6 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
-import android.widget.BaseAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -197,38 +197,18 @@ public class HostMappingActivity extends BaseActivity implements OnItemClickList
 
 	}
 
-	static class HostMappingAdapter extends BaseAdapter {
+	static class HostMappingAdapter extends ArrayAdapter<String> {
 
 		private final SharedPreferences mPreferences;
-		private final LayoutInflater mInflater;
-		private Map<String, ?> mData;
-		private String[] mKeys;
 
 		public HostMappingAdapter(final Context context) {
+			super(context, android.R.layout.simple_list_item_2);
 			mPreferences = context.getSharedPreferences(HOST_MAPPING_PREFERENCES_NAME, Context.MODE_PRIVATE);
-			mInflater = LayoutInflater.from(context);
-		}
-
-		@Override
-		public int getCount() {
-			return mData != null ? mData.size() : 0;
-		}
-
-		@Override
-		public String getItem(final int position) {
-			return mKeys.length > 0 && position < mKeys.length ? mKeys[position] : null;
-		}
-
-		@Override
-		public long getItemId(final int position) {
-			final Object obj = getItem(position);
-			return obj != null ? obj.hashCode() : 0;
 		}
 
 		@Override
 		public View getView(final int position, final View convertView, final ViewGroup parent) {
-			final View view = convertView != null ? convertView : mInflater.inflate(
-					android.R.layout.simple_list_item_2, null);
+			final View view = super.getView(position, convertView, parent);
 			final TextView text1 = (TextView) view.findViewById(android.R.id.text1);
 			final TextView text2 = (TextView) view.findViewById(android.R.id.text2);
 			final String key = getItem(position);
@@ -238,9 +218,9 @@ public class HostMappingActivity extends BaseActivity implements OnItemClickList
 		}
 
 		public void reload() {
-			mData = mPreferences.getAll();
-			mKeys = mData.keySet().toArray(new String[mData.size()]);
-			notifyDataSetChanged();
+			clear();
+			final Map<String, ?> all = mPreferences.getAll();
+			addAll(all.keySet());
 		}
 
 	}

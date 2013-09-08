@@ -184,6 +184,7 @@ public class ImageViewerActivity extends SwipeBackActivity implements Constants,
 	protected void onCreate(final Bundle icicle) {
 		super.onCreate(icicle);
 		setContentView(R.layout.image_viewer);
+		setOverrideExitAniamtion(false);
 		loadImage();
 	}
 
