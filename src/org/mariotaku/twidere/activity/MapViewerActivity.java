@@ -20,7 +20,6 @@
 package org.mariotaku.twidere.activity;
 
 import static org.mariotaku.twidere.util.Utils.isDebugBuild;
-
 import me.imid.swipebacklayout.lib.app.SwipeBackActivity;
 
 import org.mariotaku.twidere.Constants;
@@ -81,7 +80,8 @@ public class MapViewerActivity extends SwipeBackActivity implements Constants, O
 			finish();
 			return;
 		}
-		final Fragment fragment = isNativeMapSupported() && !isDebugBuild() ? new NativeMapFragment() : new WebMapFragment();
+		final Fragment fragment = isNativeMapSupported() && !isDebugBuild() ? new NativeMapFragment()
+				: new WebMapFragment();
 		fragment.setArguments(bundle);
 		final FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
 		ft.replace(R.id.map_frame, fragment).commit();

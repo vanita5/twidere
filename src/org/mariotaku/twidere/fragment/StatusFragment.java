@@ -31,7 +31,6 @@ import static org.mariotaku.twidere.util.Utils.getImagesInStatus;
 import static org.mariotaku.twidere.util.Utils.getTwitterInstance;
 import static org.mariotaku.twidere.util.Utils.getUserColor;
 import static org.mariotaku.twidere.util.Utils.getUserTypeIconRes;
-import static org.mariotaku.twidere.util.Utils.isMyActivatedAccount;
 import static org.mariotaku.twidere.util.Utils.isMyRetweet;
 import static org.mariotaku.twidere.util.Utils.isSameAccount;
 import static org.mariotaku.twidere.util.Utils.openImage;
@@ -694,7 +693,9 @@ public class StatusFragment extends ParcelableStatusesListFragment implements On
 	}
 
 	private void addConversationStatus(final ParcelableStatus status) {
+		if (getActivity() == null || isDetached()) return;
 		final List<ParcelableStatus> data = getData();
+		if (data == null) return;
 		data.add(status);
 		final ParcelableStatusesAdapter adapter = (ParcelableStatusesAdapter) getListAdapter();
 		adapter.setData(data);
@@ -971,7 +972,7 @@ public class StatusFragment extends ParcelableStatusesListFragment implements On
 
 		private Response<Boolean> isAllFollowing() {
 			if (status == null) return new Response<Boolean>(null, null);
-			if (isMyActivatedAccount(context, status.user_id)) return new Response<Boolean>(true, null);
+			if (status.account_id == status.user_id) return new Response<Boolean>(true, null);
 			final Twitter twitter = getTwitterInstance(context, status.account_id, false);
 			if (twitter == null) return new Response<Boolean>(null, null);
 			try {

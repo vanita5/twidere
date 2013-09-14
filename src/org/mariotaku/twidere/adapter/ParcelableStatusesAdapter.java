@@ -222,9 +222,11 @@ public class ParcelableStatusesAdapter extends ArrayAdapter<ParcelableStatus> im
 			if (has_preview) {
 				holder.setImagePreviewDisplayOption(mImagePreviewDisplayOption);
 				if (status.is_possibly_sensitive && !mDisplaySensitiveContents) {
-					holder.image_preview.setImageResource(R.drawable.image_preview_nsfw);
+					holder.image_preview.setImageDrawable(null);
+					holder.image_preview.setBackgroundResource(R.drawable.image_preview_nsfw);
 					holder.image_preview_progress.setVisibility(View.GONE);
 				} else if (!status.image_preview_url.equals(mLoadingViewsMap.get(holder.image_preview))) {
+					holder.image_preview.setBackgroundResource(0);
 					mImageLoader.displayPreviewImage(holder.image_preview, status.image_preview_url, this);
 				}
 				holder.image_preview.setTag(position);

@@ -211,9 +211,11 @@ public class CursorStatusesAdapter extends SimpleCursorAdapter implements IStatu
 			if (has_preview) {
 				holder.setImagePreviewDisplayOption(mImagePreviewDisplayOption);
 				if (is_possibly_sensitive && !mDisplaySensitiveContents) {
-					holder.image_preview.setImageResource(R.drawable.image_preview_nsfw);
+					holder.image_preview.setImageDrawable(null);
+					holder.image_preview.setBackgroundResource(R.drawable.image_preview_nsfw);
 					holder.image_preview_progress.setVisibility(View.GONE);
 				} else if (!image_preview_url.equals(mLoadingViewsMap.get(holder.image_preview))) {
+					holder.image_preview.setBackgroundResource(0);
 					mImageLoader.displayPreviewImage(holder.image_preview, image_preview_url, this);
 				}
 				holder.image_preview.setTag(position);
