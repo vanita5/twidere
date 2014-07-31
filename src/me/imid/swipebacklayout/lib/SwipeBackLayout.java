@@ -18,6 +18,8 @@ import android.widget.ImageView.ScaleType;
 
 import org.mariotaku.twidere.R;
 import org.mariotaku.twidere.util.MathUtils;
+import org.mariotaku.twidere.util.ThemeUtils;
+import org.mariotaku.twidere.util.accessor.ViewAccessor;
 
 public class SwipeBackLayout extends FrameLayout {
 	/**
@@ -134,6 +136,7 @@ public class SwipeBackLayout extends FrameLayout {
 
 	public SwipeBackLayout(final Context context, final AttributeSet attrs, final int defStyle) {
 		super(context, attrs);
+		setFitsSystemWindows(true);
 		mDragHelper = ViewDragHelper.create(this, new ViewDragCallback());
 
 		final TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.SwipeBackLayout, defStyle,
@@ -146,12 +149,9 @@ public class SwipeBackLayout extends FrameLayout {
 		final int mode = EDGE_FLAGS[a.getInt(R.styleable.SwipeBackLayout_edgeFlag, 0)];
 		setEdgeTrackingEnabled(mode);
 
-		final int shadowLeft = a
-				.getResourceId(R.styleable.SwipeBackLayout_shadowLeft, R.drawable.swipeback_shadow_left);
-		final int shadowRight = a.getResourceId(R.styleable.SwipeBackLayout_shadowRight,
-				R.drawable.swipeback_shadow_right);
-		final int shadowBottom = a.getResourceId(R.styleable.SwipeBackLayout_shadowBottom,
-				R.drawable.swipeback_shadow_bottom);
+		final int shadowLeft = a.getResourceId(R.styleable.SwipeBackLayout_shadowLeft, R.drawable.shadow_left);
+		final int shadowRight = a.getResourceId(R.styleable.SwipeBackLayout_shadowRight, R.drawable.shadow_right);
+		final int shadowBottom = a.getResourceId(R.styleable.SwipeBackLayout_shadowBottom, R.drawable.shadow_bottom);
 		final int scrimColor = a.getColor(R.styleable.SwipeBackLayout_scrimColor, DEFAULT_SCRIM_COLOR);
 		final float scrimAlpha = a.getFloat(R.styleable.SwipeBackLayout_scrimAlpha, Color.alpha(scrimColor) / 255.0f);
 		final float scalePercent = a.getFraction(R.styleable.SwipeBackLayout_scalePercent, 1, 1, 1);
@@ -170,20 +170,19 @@ public class SwipeBackLayout extends FrameLayout {
 
 	public void attachToActivity(final Activity activity) {
 		mActivity = activity;
-		final TypedArray a = activity.getTheme().obtainStyledAttributes(new int[] { android.R.attr.windowBackground });
-		final int background = a.getResourceId(0, 0);
-		a.recycle();
+		final Drawable background = ThemeUtils.getWindowBackground(activity);
 
 		final ViewGroup decor = (ViewGroup) activity.getWindow().getDecorView();
 		final ViewGroup decorChild = (ViewGroup) decor.getChildAt(0);
 		final ImageView backgroundChild = new ImageView(activity);
 		backgroundChild.setScaleType(ScaleType.CENTER_CROP);
-		decorChild.setBackgroundResource(background);
+		ViewAccessor.setBackground(decorChild, background);
 		decor.removeView(decorChild);
 		setBackgroundView(backgroundChild);
 		setContentView(decorChild);
 		addView(decorChild, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
 		final FrameLayout frame = new FrameLayout(activity);
+		frame.setFitsSystemWindows(true);
 		frame.addView(backgroundChild, LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
 		frame.addView(this);
 		decor.addView(frame);
@@ -465,6 +464,7 @@ public class SwipeBackLayout extends FrameLayout {
 		if (mBackgroundView == null) return;
 		final float scrollPercentAbs = Math.abs(mScrollPercent);
 		final float percent = MathUtils.clamp(1 - (1 - scrollPercentAbs) * (1 - mScalePercent), 1, 0);
+		mBackgroundView.setScaleType(ScaleType.CENTER_CROP);
 		mBackgroundView.setScaleX(percent);
 		mBackgroundView.setScaleY(percent);
 		mBackgroundView.setVisibility(mScrollPercent <= 0 ? View.INVISIBLE : View.VISIBLE);

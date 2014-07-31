@@ -1,20 +1,20 @@
 /*
- *				Twidere - Twitter client for Android
+ * 				Twidere - Twitter client for Android
  * 
- * Copyright (C) 2012 Mariotaku Lee <mariotaku.lee@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.mariotaku.twidere.fragment.support;
@@ -26,6 +26,7 @@ import static org.mariotaku.twidere.util.Utils.getOldestMessageIdsFromDatabase;
 import static org.mariotaku.twidere.util.Utils.openDirectMessagesConversation;
 
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -33,8 +34,6 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.LoaderManager.LoaderCallbacks;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
@@ -47,13 +46,14 @@ import org.mariotaku.querybuilder.Columns.Column;
 import org.mariotaku.querybuilder.RawItemArray;
 import org.mariotaku.querybuilder.Where;
 import org.mariotaku.twidere.R;
-import org.mariotaku.twidere.activity.HomeActivity;
-import org.mariotaku.twidere.adapter.DirectMessagesEntryAdapter;
+import org.mariotaku.twidere.adapter.DirectMessageConversationEntriesAdapter;
+import org.mariotaku.twidere.provider.TweetStore.Accounts;
 import org.mariotaku.twidere.provider.TweetStore.DirectMessages;
 import org.mariotaku.twidere.provider.TweetStore.Statuses;
 import org.mariotaku.twidere.task.AsyncTask;
 import org.mariotaku.twidere.util.AsyncTwitterWrapper;
 import org.mariotaku.twidere.util.MultiSelectManager;
+import org.mariotaku.twidere.util.content.SupportFragmentReloadCursorObserver;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -63,21 +63,16 @@ import java.util.Set;
 
 public class DirectMessagesFragment extends BasePullToRefreshListFragment implements LoaderCallbacks<Cursor> {
 
+	private final SupportFragmentReloadCursorObserver mReloadContentObserver = new SupportFragmentReloadCursorObserver(
+			this, 0, this);
+
 	private final BroadcastReceiver mStatusReceiver = new BroadcastReceiver() {
 
 		@Override
 		public void onReceive(final Context context, final Intent intent) {
 			if (getActivity() == null || !isAdded() || isDetached()) return;
 			final String action = intent.getAction();
-			if (BROADCAST_ACCOUNT_LIST_DATABASE_UPDATED.equals(action)) {
-				getLoaderManager().restartLoader(0, null, DirectMessagesFragment.this);
-			} else if (BROADCAST_RECEIVED_DIRECT_MESSAGES_DATABASE_UPDATED.equals(action)
-					|| BROADCAST_SENT_DIRECT_MESSAGES_DATABASE_UPDATED.equals(action)) {
-				getLoaderManager().restartLoader(0, null, DirectMessagesFragment.this);
-			} else if (BROADCAST_RECEIVED_DIRECT_MESSAGES_REFRESHED.equals(action)
-					|| BROADCAST_SENT_DIRECT_MESSAGES_REFRESHED.equals(action)) {
-				getLoaderManager().restartLoader(0, null, DirectMessagesFragment.this);
-			} else if (BROADCAST_TASK_STATE_CHANGED.equals(action)) {
+			if (BROADCAST_TASK_STATE_CHANGED.equals(action)) {
 				updateRefreshState();
 			}
 		}
@@ -90,7 +85,7 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 
 	private boolean mLoadMoreAutomatically;
 
-	private DirectMessagesEntryAdapter mAdapter;
+	private DirectMessageConversationEntriesAdapter mAdapter;
 	private int mFirstVisibleItem;
 
 	private final Map<Long, Set<Long>> mUnreadCountsToRemove = Collections
@@ -101,8 +96,8 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 	private RemoveUnreadCountsTask mRemoveUnreadCountsTask;
 
 	@Override
-	public DirectMessagesEntryAdapter getListAdapter() {
-		return (DirectMessagesEntryAdapter) super.getListAdapter();
+	public DirectMessageConversationEntriesAdapter getListAdapter() {
+		return (DirectMessageConversationEntriesAdapter) super.getListAdapter();
 	}
 
 	public final Map<Long, Set<Long>> getUnreadCountsToRemove() {
@@ -114,7 +109,7 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 		mPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE);
 		super.onActivityCreated(savedInstanceState);
 		mMultiSelectManager = getMultiSelectManager();
-		mAdapter = new DirectMessagesEntryAdapter(getActivity());
+		mAdapter = new DirectMessageConversationEntriesAdapter(getActivity());
 		setListAdapter(mAdapter);
 		mListView = getListView();
 		mListView.setDivider(null);
@@ -125,7 +120,7 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 
 	@Override
 	public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
-		final Uri uri = DirectMessages.ConversationsEntry.CONTENT_URI;
+		final Uri uri = DirectMessages.ConversationEntries.CONTENT_URI;
 		final long account_id = getAccountId();
 		final long[] account_ids = account_id > 0 ? new long[] { account_id } : getActivatedAccountIds(getActivity());
 		final boolean no_account_selected = account_ids.length == 0;
@@ -141,13 +136,12 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 	public void onListItemClick(final ListView l, final View v, final int position, final long id) {
 		if (mMultiSelectManager.isActive()) return;
 		final int pos = position - l.getHeaderViewsCount();
-		final long conversation_id = mAdapter.getConversationId(pos);
-		final long account_id = mAdapter.getAccountId(pos);
-		final String screen_name = mAdapter.getScreenName(pos);
+		final long conversationId = mAdapter.getConversationId(pos);
+		final long accountId = mAdapter.getAccountId(pos);
 		mReadPositions.add(pos);
 		removeUnreadCounts();
-		if (conversation_id > 0 && account_id > 0) {
-			openDirectMessagesConversation(getActivity(), account_id, conversation_id, screen_name);
+		if (conversationId > 0 && accountId > 0) {
+			openDirectMessagesConversation(getActivity(), accountId, conversationId);
 		}
 	}
 
@@ -169,7 +163,7 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 	public boolean onOptionsItemSelected(final MenuItem item) {
 		switch (item.getItemId()) {
 			case MENU_COMPOSE: {
-				openDirectMessagesConversation(getActivity(), -1, -1, null);
+				openDirectMessagesConversation(getActivity(), -1, -1);
 				break;
 			}
 		}
@@ -177,15 +171,13 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 	}
 
 	@Override
-	public void onPostStart() {
-		if (!isActivityFirstCreated()) {
-			getLoaderManager().restartLoader(0, null, this);
-		}
+	public void onRefreshFromEnd() {
+		if (mLoadMoreAutomatically) return;
+		loadMoreMessages();
 	}
 
 	@Override
-	public void onRefreshStarted() {
-		super.onRefreshStarted();
+	public void onRefreshFromStart() {
 		new AsyncTask<Void, Void, long[][]>() {
 
 			@Override
@@ -210,9 +202,9 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 	@Override
 	public void onResume() {
 		super.onResume();
-		mListView.setFastScrollEnabled(mPreferences.getBoolean(PREFERENCE_KEY_FAST_SCROLL_THUMB, false));
+		mListView.setFastScrollEnabled(mPreferences.getBoolean(KEY_FAST_SCROLL_THUMB, false));
 		configBaseCardAdapter(getActivity(), mAdapter);
-		mLoadMoreAutomatically = mPreferences.getBoolean(PREFERENCE_KEY_LOAD_MORE_AUTOMATICALLY, false);
+		mLoadMoreAutomatically = mPreferences.getBoolean(KEY_LOAD_MORE_AUTOMATICALLY, false);
 	}
 
 	@Override
@@ -227,10 +219,6 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 		switch (scrollState) {
 			case SCROLL_STATE_FLING:
 			case SCROLL_STATE_TOUCH_SCROLL: {
-				final AsyncTwitterWrapper twitter = getTwitterWrapper();
-				if (twitter != null) {
-					twitter.clearNotification(NOTIFICATION_ID_DIRECT_MESSAGES);
-				}
 				break;
 			}
 			case SCROLL_STATE_IDLE: {
@@ -246,12 +234,9 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 	@Override
 	public void onStart() {
 		super.onStart();
+		final ContentResolver resolver = getContentResolver();
+		resolver.registerContentObserver(Accounts.CONTENT_URI, true, mReloadContentObserver);
 		final IntentFilter filter = new IntentFilter();
-		filter.addAction(BROADCAST_ACCOUNT_LIST_DATABASE_UPDATED);
-		filter.addAction(BROADCAST_RECEIVED_DIRECT_MESSAGES_DATABASE_UPDATED);
-		filter.addAction(BROADCAST_SENT_DIRECT_MESSAGES_DATABASE_UPDATED);
-		filter.addAction(BROADCAST_RECEIVED_DIRECT_MESSAGES_REFRESHED);
-		filter.addAction(BROADCAST_SENT_DIRECT_MESSAGES_REFRESHED);
 		filter.addAction(BROADCAST_TASK_STATE_CHANGED);
 		registerReceiver(mStatusReceiver, filter);
 	}
@@ -259,24 +244,17 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 	@Override
 	public void onStop() {
 		unregisterReceiver(mStatusReceiver);
+		final ContentResolver resolver = getContentResolver();
+		resolver.unregisterContentObserver(mReloadContentObserver);
 		super.onStop();
 	}
 
 	@Override
 	public boolean scrollToStart() {
 		final AsyncTwitterWrapper twitter = getTwitterWrapper();
-		final int tab_position = getTabPosition();
-		if (twitter != null && tab_position >= 0) {
-			twitter.clearUnreadCountAsync(tab_position);
-		}
-		final FragmentActivity activity = getActivity();
-		if (activity instanceof HomeActivity) {
-			final HomeActivity home = (HomeActivity) activity;
-			if (home.isDualPaneMode() && home.isRightPaneUsed() && home.isRightPaneOpened()) {
-				final Fragment right_pane = home.getRightPaneFragment();
-				if (right_pane instanceof DirectMessagesConversationFragment)
-					return ((DirectMessagesConversationFragment) right_pane).scrollToStart();
-			}
+		final int tabPosition = getTabPosition();
+		if (twitter != null && tabPosition >= 0) {
+			twitter.clearUnreadCountAsync(tabPosition);
 		}
 		return super.scrollToStart();
 	}
@@ -295,9 +273,11 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 	}
 
 	@Override
-	protected void onPullUp() {
-		if (mLoadMoreAutomatically) return;
-		loadMoreMessages();
+	protected void onListTouched() {
+		final AsyncTwitterWrapper twitter = getTwitterWrapper();
+		if (twitter != null) {
+			twitter.clearNotificationAsync(NOTIFICATION_ID_DIRECT_MESSAGES, getAccountId());
+		}
 	}
 
 	@Override
@@ -362,7 +342,7 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 
 	static class RemoveUnreadCountsTask extends AsyncTask<Void, Void, Void> {
 		private final Set<Integer> read_positions;
-		private final DirectMessagesEntryAdapter adapter;
+		private final DirectMessageConversationEntriesAdapter adapter;
 		private final DirectMessagesFragment fragment;
 
 		RemoveUnreadCountsTask(final Set<Integer> read_positions, final DirectMessagesFragment fragment) {
@@ -389,4 +369,5 @@ public class DirectMessagesFragment extends BasePullToRefreshListFragment implem
 		}
 
 	}
+
 }

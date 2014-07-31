@@ -1,20 +1,20 @@
 /*
- *				Twidere - Twitter client for Android
+ * 				Twidere - Twitter client for Android
  * 
- * Copyright (C) 2012 Mariotaku Lee <mariotaku.lee@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.mariotaku.twidere.util;
@@ -42,6 +42,8 @@ public class TwitterErrorCodes {
 		ERROR_CODE_MESSAGES.put(130, R.string.error_130);
 		ERROR_CODE_MESSAGES.put(131, R.string.error_131);
 		ERROR_CODE_MESSAGES.put(135, R.string.error_135);
+		ERROR_CODE_MESSAGES.put(162, R.string.error_162);
+		ERROR_CODE_MESSAGES.put(172, R.string.error_172);
 		ERROR_CODE_MESSAGES.put(NOT_AUTHORIZED, R.string.error_179);
 		ERROR_CODE_MESSAGES.put(STATUS_IS_DUPLICATE, R.string.error_187);
 		ERROR_CODE_MESSAGES.put(193, R.string.error_193);

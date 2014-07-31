@@ -1,11 +1,31 @@
+/*
+ * 				Twidere - Twitter client for Android
+ * 
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.mariotaku.twidere.util;
 
-import static org.mariotaku.twidere.util.ThemeUtils.isTransparentBackground;
-
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -13,21 +33,41 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.os.Bundle;
-import android.support.v4.app.FragmentActivity;
-import android.view.LayoutInflater;
+import android.support.v4.app.ActivityCompat;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
-import android.widget.ProgressBar;
 
 import org.mariotaku.twidere.TwidereConstants;
-import org.mariotaku.twidere.fragment.BaseDialogFragment;
-import org.mariotaku.twidere.fragment.support.BaseSupportDialogFragment;
-import org.mariotaku.twidere.task.AsyncTask;
+import org.mariotaku.twidere.app.TwidereApplication;
 
-import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 
 public class SwipebackActivityUtils implements TwidereConstants {
+
+	public static void setActivityScreenshot(final Activity activity, final Intent target) {
+		if (activity == null || target == null) return;
+		final SharedPreferences prefs = activity.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE);
+		if (!prefs.getBoolean(KEY_SWIPE_BACK, false)) return;
+		final TwidereApplication app = TwidereApplication.getInstance(activity);
+		final SwipebackScreenshotManager sm = app.getSwipebackScreenshotManager();
+		final long key = System.currentTimeMillis();
+		final Bitmap sc = getActivityScreenshot(activity, View.DRAWING_CACHE_QUALITY_LOW);
+		sm.put(key, sc, ThemeUtils.isTransparentBackground(activity));
+		target.putExtra(EXTRA_ACTIVITY_SCREENSHOT_ID, key);
+	}
+
+	public static void startSwipebackActivity(final Activity activity, final Intent intent) {
+		setActivityScreenshot(activity, intent);
+		activity.startActivityForResult(intent, REQUEST_SWIPEBACK_ACTIVITY);
+	}
+
+	public static void startSwipebackActivity(final Activity activity, final Intent intent, final Bundle options) {
+		setActivityScreenshot(activity, intent);
+		ActivityCompat.startActivityForResult(activity, intent, REQUEST_SWIPEBACK_ACTIVITY, options);
+	}
 
 	/**
 	 * 
@@ -37,192 +77,88 @@ public class SwipebackActivityUtils implements TwidereConstants {
 	 * @param cacheQuality
 	 * @return Activity screenshot
 	 */
-	@Deprecated
-	public static Bitmap getActivityScreenshot(final Activity activity, final int cacheQuality) {
+	private static Bitmap getActivityScreenshot(final Activity activity, final int cacheQuality) {
+		try {
+			return getActivityScreenshotInternal(activity, cacheQuality);
+		} catch (final OutOfMemoryError oom) {
+			return null;
+		} catch (final StackOverflowError sof) {
+			return null;
+		}
+	}
+
+	/**
+	 * 
+	 * May cause OutOfMemoryError
+	 * 
+	 * @param activity
+	 * @param cacheQuality
+	 * @return Activity screenshot
+	 */
+	private static Bitmap getActivityScreenshotInternal(final Activity activity, final int cacheQuality) {
 		if (activity == null) return null;
 		final Window w = activity.getWindow();
 		final View view = w.getDecorView();
-		final boolean prevState = view.isDrawingCacheEnabled();
-		final int prevQuality = view.getDrawingCacheQuality();
-		view.setDrawingCacheEnabled(true);
-		view.setDrawingCacheQuality(cacheQuality);
-		view.buildDrawingCache();
-		final Bitmap cache = view.getDrawingCache();
-		if (cache == null) return null;
-		final Bitmap b = Bitmap.createBitmap(cache);
+		final int width = view.getWidth(), height = view.getHeight();
+		if (width <= 0 || height <= 0) return null;
+		final Bitmap b = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_4444);
 		final Rect frame = new Rect();
 		view.getWindowVisibleDisplayFrame(frame);
 		// Remove window background behind status bar.
 		final Canvas c = new Canvas(b);
+		view.draw(c);
 		final Paint paint = new Paint();
 		paint.setColor(Color.TRANSPARENT);
 		paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
 		c.drawRect(frame.left, 0, frame.right, frame.top, paint);
-		view.setDrawingCacheEnabled(prevState);
-		view.setDrawingCacheQuality(prevQuality);
 		return b;
 	}
 
-	public static byte[] getEncodedActivityScreenshot(final Activity activity, final int cacheQuality,
-			final Bitmap.CompressFormat encodeFormat, final int encodeQuality) {
-		if (activity == null) return null;
-		final Window w = activity.getWindow();
-		final View view = w.getDecorView();
-		final boolean prevState = view.isDrawingCacheEnabled();
-		final int prevQuality = view.getDrawingCacheQuality();
-		view.setDrawingCacheEnabled(true);
-		view.setDrawingCacheQuality(cacheQuality);
-		view.buildDrawingCache();
-		final Bitmap b = view.getDrawingCache();
-		if (b == null) return null;
-		final Rect frame = new Rect();
-		view.getWindowVisibleDisplayFrame(frame);
-		// Remove window background behind status bar.
-		final Canvas c = new Canvas(b);
-		final Paint paint = new Paint();
-		paint.setColor(Color.TRANSPARENT);
-		paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
-		c.drawRect(frame.left, 0, frame.right, frame.top, paint);
-		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		b.compress(encodeFormat, encodeQuality, baos);
-		view.setDrawingCacheEnabled(prevState);
-		view.setDrawingCacheQuality(prevQuality);
-		if (!b.isRecycled()) {
-			b.recycle();
-		}
-		return baos.toByteArray();
-	}
+	public static class SwipebackScreenshotManager {
 
-	public static void setActivityScreenshot(final Activity activity, final Intent target) {
-		final CompressFormat format = isTransparentBackground(activity) ? CompressFormat.PNG : CompressFormat.JPEG;
-		final byte[] encoded_screenshot = getEncodedActivityScreenshot(activity, View.DRAWING_CACHE_QUALITY_LOW,
-				format, 80);
-		target.putExtra(EXTRA_ACTIVITY_SCREENSHOT_ENCODED, encoded_screenshot);
-	}
+		private final static String DIR_NAME_SWIPEBACK_CACHE = "swipeback_cache";
+		private static final CompressFormat COMPRESS_FORMAT = Bitmap.CompressFormat.JPEG;
+		private static final CompressFormat COMPRESS_FORMAT_TRANSPARENT = Bitmap.CompressFormat.PNG;
+		private final File mCacheDir;
 
-	public static void startSwipebackActivity(final Activity activity, final Intent intent) {
-		// setActivityScreenshot(activity, intent);
-		// activity.startActivityForResult(intent, REQUEST_SWIPEBACK_ACTIVITY);
-		new StartSwipebackActivityTask(activity, intent).execute();
-	}
-
-	public static class StartSwipebackActivityTask extends AsyncTask<Void, Void, byte[]> {
-
-		private static final String PROGRESS_DIALOG_FRAGMENT_TAG = "open_activity_progress";
-
-		private final Activity mActivity;
-		private final Intent mTarget;
-		private final View mDecorView;
-		private boolean mPrevState;
-		private int mPrevQuality;
-		private Bitmap mCache;
-		private final Rect mRect;
-
-		public StartSwipebackActivityTask(final Activity activity, final Intent target) {
-			mActivity = activity;
-			mTarget = target;
-			mRect = new Rect();
-			mDecorView = mActivity.getWindow().getDecorView();
+		public SwipebackScreenshotManager(final Context context) {
+			mCacheDir = Utils.getBestCacheDir(context, DIR_NAME_SWIPEBACK_CACHE);
 		}
 
-		@Override
-		protected byte[] doInBackground(final Void... params) {
-			if (mCache == null || mCache.isRecycled()) return null;
-			// Remove window background behind status bar.
-			final Canvas c = new Canvas(mCache);
-			final Paint paint = new Paint();
-			paint.setColor(Color.TRANSPARENT);
-			paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
-			c.drawRect(mRect.left, 0, mRect.right, mRect.top, paint);
-			final CompressFormat format = isTransparentBackground(mActivity) ? CompressFormat.PNG : CompressFormat.JPEG;
-			final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			mCache.compress(format, 80, baos);
-			return baos.toByteArray();
+		public Bitmap get(final long id) {
+			final File f = new File(mCacheDir, String.valueOf(id));
+			if (!f.exists()) return null;
+			try {
+				return BitmapFactory.decodeFile(f.getAbsolutePath());
+			} catch (final OutOfMemoryError e) {
+				return null;
+			} finally {
+				System.gc();
+			}
 		}
 
-		@Override
-		protected void onPostExecute(final byte[] result) {
-			mDecorView.setDrawingCacheEnabled(mPrevState);
-			mDecorView.setDrawingCacheQuality(mPrevQuality);
-			if (mCache != null && !mCache.isRecycled()) {
-				mCache.recycle();
+		public void put(final long id, final Bitmap bitmap, final boolean alphaChannel) {
+			if (bitmap == null || bitmap.isRecycled()) return;
+			try {
+				final OutputStream os = new FileOutputStream(new File(mCacheDir, String.valueOf(id)));
+				bitmap.compress(alphaChannel ? COMPRESS_FORMAT_TRANSPARENT : COMPRESS_FORMAT, 75, os);
+				bitmap.recycle();
+			} catch (final IOException e) {
+				e.printStackTrace();
+			} finally {
+				System.gc();
 			}
-			mTarget.putExtra(EXTRA_ACTIVITY_SCREENSHOT_ENCODED, result);
-			if (mActivity instanceof FragmentActivity) {
-				final FragmentActivity a = (FragmentActivity) mActivity;
-				final BaseSupportDialogFragment f = (BaseSupportDialogFragment) a.getSupportFragmentManager()
-						.findFragmentByTag(PROGRESS_DIALOG_FRAGMENT_TAG);
-				if (f != null) {
-					f.dismiss();
-				}
-			} else {
-				final BaseDialogFragment f = (BaseDialogFragment) mActivity.getFragmentManager().findFragmentByTag(
-						PROGRESS_DIALOG_FRAGMENT_TAG);
-				if (f != null) {
-					f.dismiss();
-				}
-			}
-			mActivity.startActivityForResult(mTarget, REQUEST_SWIPEBACK_ACTIVITY);
 		}
 
-		@Override
-		protected void onPreExecute() {
-			if (mActivity instanceof FragmentActivity) {
-				SupportOpenActivityProgressDialogFragment.show((FragmentActivity) mActivity);
-			} else {
-				OpenActivityProgressDialogFragment.show(mActivity);
+		public boolean remove(final long id) {
+			final File f = new File(mCacheDir, String.valueOf(id));
+			if (!f.exists()) return false;
+			try {
+				return f.delete();
+			} finally {
+				System.gc();
 			}
-			mPrevState = mDecorView.isDrawingCacheEnabled();
-			mPrevQuality = mDecorView.getDrawingCacheQuality();
-			mDecorView.setDrawingCacheEnabled(true);
-			mDecorView.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_LOW);
-			mDecorView.buildDrawingCache();
-			mCache = mDecorView.getDrawingCache();
-			mDecorView.getWindowVisibleDisplayFrame(mRect);
 		}
 
-		public static class OpenActivityProgressDialogFragment extends BaseDialogFragment {
-
-			public OpenActivityProgressDialogFragment() {
-				super();
-				setStyle(STYLE_NO_FRAME, 0);
-				setCancelable(false);
-			}
-
-			@Override
-			public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
-					final Bundle savedInstanceState) {
-				return new ProgressBar(getActivity(), null, android.R.attr.progressBarStyleLarge);
-			}
-
-			public static OpenActivityProgressDialogFragment show(final Activity activity) {
-				final OpenActivityProgressDialogFragment f = new OpenActivityProgressDialogFragment();
-				f.show(activity.getFragmentManager(), PROGRESS_DIALOG_FRAGMENT_TAG);
-				return f;
-			}
-
-		}
-
-		public static class SupportOpenActivityProgressDialogFragment extends BaseSupportDialogFragment {
-
-			public SupportOpenActivityProgressDialogFragment() {
-				super();
-				setStyle(STYLE_NO_FRAME, 0);
-				setCancelable(false);
-			}
-
-			@Override
-			public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
-					final Bundle savedInstanceState) {
-				return new ProgressBar(getActivity(), null, android.R.attr.progressBarStyleLarge);
-			}
-
-			public static SupportOpenActivityProgressDialogFragment show(final FragmentActivity activity) {
-				final SupportOpenActivityProgressDialogFragment f = new SupportOpenActivityProgressDialogFragment();
-				f.show(activity.getSupportFragmentManager(), PROGRESS_DIALOG_FRAGMENT_TAG);
-				return f;
-			}
-
-		}
 	}
 }

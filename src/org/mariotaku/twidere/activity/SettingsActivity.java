@@ -1,29 +1,32 @@
 /*
- *				Twidere - Twitter client for Android
+ * 				Twidere - Twitter client for Android
  * 
- * Copyright (C) 2012 Mariotaku Lee <mariotaku.lee@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.mariotaku.twidere.activity;
 
+import android.app.ActionBar;
+import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,26 +35,21 @@ import android.widget.ListAdapter;
 import android.widget.TextView;
 
 import org.mariotaku.twidere.R;
+import org.mariotaku.twidere.activity.support.DataExportActivity;
+import org.mariotaku.twidere.activity.support.DataImportActivity;
 import org.mariotaku.twidere.adapter.ArrayAdapter;
 import org.mariotaku.twidere.util.ThemeUtils;
 import org.mariotaku.twidere.view.holder.ViewHolder;
 
 import java.util.List;
 
-public class SettingsActivity extends BaseThemedPreferenceActivity {
+public class SettingsActivity extends BasePreferenceActivity {
 
 	private HeaderAdapter mAdapter;
-	private boolean mIsCallingFinish;
-
-	@Override
-	public void finish() {
-		mIsCallingFinish = true;
-		super.finish();
-	}
 
 	public HeaderAdapter getHeaderAdapter() {
 		if (mAdapter != null) return mAdapter;
-		return mAdapter = new HeaderAdapter(this);
+		return mAdapter = new HeaderAdapter(ThemeUtils.getContextForActionIcons(this, getThemeResourceId()));
 	}
 
 	@Override
@@ -63,10 +61,27 @@ public class SettingsActivity extends BaseThemedPreferenceActivity {
 	}
 
 	@Override
+	public boolean onCreateOptionsMenu(final Menu menu) {
+		if (getIntent().getStringExtra(EXTRA_SHOW_FRAGMENT) != null) return false;
+		getMenuInflater().inflate(R.menu.menu_settings, menu);
+		return true;
+	}
+
+	@Override
 	public boolean onOptionsItemSelected(final MenuItem item) {
 		switch (item.getItemId()) {
 			case MENU_HOME: {
 				onBackPressed();
+				return true;
+			}
+			case MENU_IMPORT_SETTINGS: {
+				final Intent intent = new Intent(this, DataImportActivity.class);
+				startActivity(intent);
+				return true;
+			}
+			case MENU_EXPORT_SETTINGS: {
+				final Intent intent = new Intent(this, DataExportActivity.class);
+				startActivity(intent);
 				return true;
 			}
 		}
@@ -83,11 +98,6 @@ public class SettingsActivity extends BaseThemedPreferenceActivity {
 	}
 
 	@Override
-	public boolean shouldOverrideActivityAnimation() {
-		return getCurrentThemeResource() == 0 || mIsCallingFinish && !isThemeChanged();
-	}
-
-	@Override
 	public void switchToHeader(final Header header) {
 		if (header == null || header.fragment == null && header.intent == null) return;
 		super.switchToHeader(header);
@@ -100,37 +110,28 @@ public class SettingsActivity extends BaseThemedPreferenceActivity {
 	}
 
 	@Override
-	protected int getThemeColor() {
-		return ThemeUtils.getUserThemeColor(this);
-	}
-
-	@Override
-	protected int getThemeResource() {
-		return ThemeUtils.getThemeResource(this);
-	}
-
-	@Override
 	protected boolean isValidFragment(final String fragmentName) {
-		return true;
+		final Class<?> cls;
+		try {
+			cls = Class.forName(fragmentName);
+		} catch (final ClassNotFoundException e) {
+			return false;
+		}
+		return Fragment.class.isAssignableFrom(cls);
 	}
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
-		mIsCallingFinish = false;
 		super.onCreate(savedInstanceState);
 		setIntent(getIntent().addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
-		getActionBar().setDisplayHomeAsUpEnabled(true);
+		final ActionBar actionBar = getActionBar();
+		actionBar.setDisplayHomeAsUpEnabled(true);
 		if (savedInstanceState != null) {
 			invalidateHeaders();
 		}
 	}
 
-	@Override
-	protected boolean shouldRestartWhenThemeChanged() {
-		return !isMultiPane() && !getIntent().hasExtra(EXTRA_SHOW_FRAGMENT);
-	}
-
-	static class HeaderAdapter extends ArrayAdapter<Header> {
+	private static class HeaderAdapter extends ArrayAdapter<Header> {
 
 		static final int HEADER_TYPE_CATEGORY = 0;
 		static final int HEADER_TYPE_NORMAL = 1;
@@ -139,7 +140,7 @@ public class SettingsActivity extends BaseThemedPreferenceActivity {
 		private final Resources mResources;
 
 		public HeaderAdapter(final Context context) {
-			super(context, R.layout.settings_list_item);
+			super(context, R.layout.list_item_settings);
 			mContext = context;
 			mResources = context.getResources();
 		}
@@ -167,10 +168,9 @@ public class SettingsActivity extends BaseThemedPreferenceActivity {
 					break;
 				}
 				default: {
-					final boolean is_switch_item = convertView != null
-							&& convertView.findViewById(android.R.id.toggle) != null;
-					final boolean should_create_new = convertView instanceof TextView || is_switch_item;
-					view = super.getView(position, should_create_new ? null : convertView, parent);
+					final boolean viewChanged = convertView != null
+							&& !(convertView.getTag() instanceof HeaderViewHolder);
+					view = super.getView(position, viewChanged ? null : convertView, parent);
 					final HeaderViewHolder holder;
 					final Object tag = view.getTag();
 					if (tag instanceof HeaderViewHolder) {
@@ -189,7 +189,7 @@ public class SettingsActivity extends BaseThemedPreferenceActivity {
 						holder.summary.setVisibility(View.GONE);
 					}
 					if (header.iconRes != 0) {
-						holder.icon.setImageResource(header.iconRes);
+						holder.icon.setImageDrawable(mResources.getDrawable(header.iconRes));
 					} else {
 						holder.icon.setImageDrawable(null);
 					}

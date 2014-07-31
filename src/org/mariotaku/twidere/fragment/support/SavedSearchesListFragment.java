@@ -1,20 +1,20 @@
 /*
- *				Twidere - Twitter client for Android
+ * 				Twidere - Twitter client for Android
  * 
- * Copyright (C) 2012 Mariotaku Lee <mariotaku.lee@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.mariotaku.twidere.fragment.support;
@@ -29,12 +29,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import org.mariotaku.twidere.loader.SavedSearchesLoader;
+import org.mariotaku.twidere.loader.support.SavedSearchesLoader;
 import org.mariotaku.twidere.model.Panes;
 
 import twitter4j.ResponseList;
@@ -44,7 +44,7 @@ import java.util.Collections;
 import java.util.Comparator;
 
 public class SavedSearchesListFragment extends BasePullToRefreshListFragment implements
-		LoaderCallbacks<ResponseList<SavedSearch>>, OnItemClickListener, Panes.Left {
+		LoaderCallbacks<ResponseList<SavedSearch>>, OnItemLongClickListener, Panes.Left {
 
 	private SavedSearchesAdapter mAdapter;
 
@@ -65,7 +65,7 @@ public class SavedSearchesListFragment extends BasePullToRefreshListFragment imp
 		mAdapter = new SavedSearchesAdapter(getActivity());
 		setListAdapter(mAdapter);
 		mListView = getListView();
-		mListView.setOnItemClickListener(this);
+		mListView.setOnItemLongClickListener(this);
 		final Bundle args = getArguments();
 		mAccountId = args != null ? args.getLong(EXTRA_ACCOUNT_ID, -1) : -1;
 		getLoaderManager().initLoader(0, null, this);
@@ -78,7 +78,15 @@ public class SavedSearchesListFragment extends BasePullToRefreshListFragment imp
 	}
 
 	@Override
-	public void onItemClick(final AdapterView<?> parent, final View view, final int position, final long id) {
+	public boolean onItemLongClick(final AdapterView<?> view, final View child, final int position, final long id) {
+		final SavedSearch item = mAdapter.findItem(id);
+		if (item == null) return false;
+		DestroySavedSearchDialogFragment.show(getFragmentManager(), mAccountId, item.getId(), item.getName());
+		return true;
+	}
+
+	@Override
+	public void onListItemClick(final ListView view, final View child, final int position, final long id) {
 		final SavedSearch item = mAdapter.findItem(id);
 		if (item == null) return;
 		openTweetSearch(getActivity(), mAccountId, item.getQuery());
@@ -99,13 +107,14 @@ public class SavedSearchesListFragment extends BasePullToRefreshListFragment imp
 		setRefreshComplete();
 	}
 
-	public void onPullUpToRefresh() {
+	@Override
+	public void onRefreshFromEnd() {
 
 	}
 
 	@Override
-	public void onRefreshStarted() {
-		super.onRefreshStarted();
+	public void onRefreshFromStart() {
+		if (isRefreshing()) return;
 		getLoaderManager().restartLoader(0, null, this);
 	}
 

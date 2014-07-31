@@ -1,3 +1,22 @@
+/*
+ * 				Twidere - Twitter client for Android
+ * 
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.mariotaku.twidere.fragment.support;
 
 import android.os.Bundle;
@@ -7,24 +26,18 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 
-public class SupportWebViewFragment extends Fragment {
+import org.mariotaku.twidere.R;
 
-	static final int INTERNAL_WEBVIEW_ID = 0x00ff1001;
+public class SupportWebViewFragment extends Fragment {
 
 	public final WebView getWebView() {
 		final View view = getView();
-		return (WebView) view.findViewById(INTERNAL_WEBVIEW_ID);
+		return (WebView) view.findViewById(R.id.webview);
 	}
 
 	@Override
 	public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState) {
-		final View view = new WebView(getActivity());
-		final ViewGroup.LayoutParams lp = container.generateLayoutParams(null);
-		lp.width = ViewGroup.LayoutParams.MATCH_PARENT;
-		lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
-		view.setId(INTERNAL_WEBVIEW_ID);
-		view.setLayoutParams(lp);
-		return view;
+		return inflater.inflate(R.layout.webview, container, false);
 	}
 
 }

@@ -1,20 +1,20 @@
 /*
- *				Twidere - Twitter client for Android
+ * 				Twidere - Twitter client for Android
  * 
- * Copyright (C) 2012 Mariotaku Lee <mariotaku.lee@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.mariotaku.twidere.fragment.support;
@@ -30,24 +30,19 @@ import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 
-import org.mariotaku.jsonserializer.JSONSerializer;
 import org.mariotaku.twidere.adapter.ParcelableStatusesAdapter;
 import org.mariotaku.twidere.adapter.iface.IStatusesAdapter;
-import org.mariotaku.twidere.loader.DummyParcelableStatusesLoader;
+import org.mariotaku.twidere.loader.support.DummyParcelableStatusesLoader;
 import org.mariotaku.twidere.model.ParcelableStatus;
 import org.mariotaku.twidere.util.ArrayUtils;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.List;
 
 public abstract class ParcelableStatusesListFragment extends BaseStatusesListFragment<List<ParcelableStatus>> {
 
 	protected SharedPreferences mPreferences;
-
-	private boolean mIsStatusesSaved;
 
 	private boolean mStatusesRestored;
 	private final BroadcastReceiver mStateReceiver = new BroadcastReceiver() {
@@ -128,27 +123,8 @@ public abstract class ParcelableStatusesListFragment extends BaseStatusesListFra
 	}
 
 	@Override
-	public void onDestroy() {
-		saveStatuses();
-		super.onDestroy();
-	}
-
-	@Override
-	public void onDestroyView() {
-		saveStatuses();
-		super.onDestroyView();
-	}
-
-	@Override
-	public final void onPostStart() {
-		if (isActivityFirstCreated()) {
-			getLoaderManager().restartLoader(0, getArguments(), this);
-		}
-	}
-
-	@Override
-	public void onRefreshStarted() {
-		super.onRefreshStarted();
+	public void onRefreshFromStart() {
+		if (isRefreshing()) return;
 		final IStatusesAdapter<List<ParcelableStatus>> adapter = getListAdapter();
 		final int count = adapter.getCount();
 		final ParcelableStatus status = count > 0 ? adapter.getStatus(0) : null;
@@ -227,32 +203,6 @@ public abstract class ParcelableStatusesListFragment extends BaseStatusesListFra
 	}
 
 	protected abstract Loader<List<ParcelableStatus>> newLoaderInstance(Context context, Bundle args);
-
-	protected void saveStatuses() {
-		if (getActivity() == null || getView() == null || mIsStatusesSaved) return;
-		if (saveStatusesInternal()) {
-			mIsStatusesSaved = true;
-		}
-	}
-
-	protected final boolean saveStatusesInternal() {
-		if (mIsStatusesSaved) return true;
-		try {
-			final List<ParcelableStatus> data = getData();
-			if (data == null) return false;
-			final int items_limit = mPreferences.getInt(PREFERENCE_KEY_DATABASE_ITEM_LIMIT,
-					PREFERENCE_DEFAULT_DATABASE_ITEM_LIMIT);
-			final List<ParcelableStatus> statuses = data.subList(0, Math.min(items_limit, data.size()));
-			final File file = JSONSerializer.getSerializationFile(getActivity(), getSavedStatusesFileArgs());
-			JSONSerializer.toFile(file, statuses.toArray(new ParcelableStatus[statuses.size()]));
-		} catch (final IOException e) {
-			return false;
-		} catch (final ConcurrentModificationException e) {
-			e.printStackTrace();
-			return false;
-		}
-		return true;
-	}
 
 	@Override
 	protected void updateRefreshState() {

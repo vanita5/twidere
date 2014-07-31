@@ -1,28 +1,35 @@
+/*
+ * 				Twidere - Twitter client for Android
+ * 
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.mariotaku.twidere.view;
 
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.graphics.Canvas;
-import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
-import android.support.v4.view.GravityCompat;
-import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
-import android.view.Gravity;
 import android.widget.ImageView;
 
-public class ForegroundImageView extends ImageView {
+import org.mariotaku.twidere.view.iface.IForegroundView;
 
-	private Drawable mForeground;
+public class ForegroundImageView extends ImageView implements IForegroundView {
 
-	private final Rect mSelfBounds = new Rect();
-	private final Rect mOverlayBounds = new Rect();
-
-	private int mForegroundGravity = Gravity.FILL;
-
-	protected boolean mForegroundInPadding = true;
-
-	boolean mForegroundBoundsChanged = false;
+	private final ForegroundViewHelper mForegroundViewHelper;
 
 	public ForegroundImageView(final Context context) {
 		this(context, null);
@@ -34,71 +41,18 @@ public class ForegroundImageView extends ImageView {
 
 	public ForegroundImageView(final Context context, final AttributeSet attrs, final int defStyle) {
 		super(context, attrs, defStyle);
-		final TypedArray a = context.obtainStyledAttributes(attrs, new int[] { android.R.attr.foreground,
-				android.R.attr.foregroundGravity }, defStyle, 0);
-
-		mForegroundGravity = a.getInt(1, mForegroundGravity);
-
-		final Drawable d = a.getDrawable(0);
-		if (d != null) {
-			setForeground(d);
-		}
-
-		mForegroundInPadding = true;
-
-		a.recycle();
+		mForegroundViewHelper = new ForegroundViewHelper(this, context, attrs, defStyle);
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
 	@Override
-	public void draw(final Canvas canvas) {
-		super.draw(canvas);
-
-		if (mForeground != null) {
-			final Drawable foreground = mForeground;
-
-			if (mForegroundBoundsChanged) {
-				mForegroundBoundsChanged = false;
-				final Rect selfBounds = mSelfBounds;
-				final Rect overlayBounds = mOverlayBounds;
-
-				final int w = getRight() - getLeft();
-				final int h = getBottom() - getTop();
-
-				if (mForegroundInPadding) {
-					selfBounds.set(0, 0, w, h);
-				} else {
-					selfBounds.set(getPaddingLeft(), getPaddingTop(), w - getPaddingRight(), h - getPaddingBottom());
-				}
-
-				final int layoutDirection = ViewCompat.getLayoutDirection(this);
-				GravityCompat.apply(mForegroundGravity, foreground.getIntrinsicWidth(),
-						foreground.getIntrinsicHeight(), selfBounds, overlayBounds, layoutDirection);
-				foreground.setBounds(overlayBounds);
-			}
-
-			foreground.draw(canvas);
-		}
-	}
-
-	/**
-	 * Returns the drawable used as the foreground of this FrameLayout. The
-	 * foreground drawable, if non-null, is always drawn on top of the children.
-	 * 
-	 * @return A Drawable or null if no foreground was set.
-	 */
 	public Drawable getForeground() {
-		return mForeground;
+		return mForegroundViewHelper.getForeground();
 	}
 
 	@Override
 	public void jumpDrawablesToCurrentState() {
 		super.jumpDrawablesToCurrentState();
-		if (mForeground != null) {
-			mForeground.jumpToCurrentState();
-		}
+		mForegroundViewHelper.jumpDrawablesToCurrentState();
 	}
 
 	/**
@@ -111,29 +65,9 @@ public class ForegroundImageView extends ImageView {
 	 * 
 	 * @attr ref android.R.styleable#FrameLayout_foreground
 	 */
+	@Override
 	public void setForeground(final Drawable drawable) {
-		if (mForeground != drawable) {
-			if (mForeground != null) {
-				mForeground.setCallback(null);
-				unscheduleDrawable(mForeground);
-			}
-
-			mForeground = drawable;
-
-			if (drawable != null) {
-				drawable.setCallback(this);
-				if (drawable.isStateful()) {
-					drawable.setState(getDrawableState());
-				}
-				if (mForegroundGravity == Gravity.FILL) {
-					final Rect padding = new Rect();
-					if (drawable.getPadding(padding)) {
-					}
-				}
-			}
-			requestLayout();
-			invalidate();
-		}
+		mForegroundViewHelper.setForeground(drawable);
 	}
 
 	/**
@@ -143,82 +77,38 @@ public class ForegroundImageView extends ImageView {
 	 * 
 	 * @attr ref android.R.styleable#FrameLayout_foregroundGravity
 	 */
-	public void setForegroundGravity(int foregroundGravity) {
-		if (mForegroundGravity != foregroundGravity) {
-			if ((foregroundGravity & Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK) == 0) {
-				foregroundGravity |= Gravity.START;
-			}
-
-			if ((foregroundGravity & Gravity.VERTICAL_GRAVITY_MASK) == 0) {
-				foregroundGravity |= Gravity.TOP;
-			}
-
-			mForegroundGravity = foregroundGravity;
-
-			if (mForegroundGravity == Gravity.FILL && mForeground != null) {
-				final Rect padding = new Rect();
-				if (mForeground.getPadding(padding)) {
-				}
-			} else {
-			}
-
-			requestLayout();
-		}
+	@Override
+	public void setForegroundGravity(final int foregroundGravity) {
+		mForegroundViewHelper.setForegroundGravity(foregroundGravity);
 	}
 
 	@Override
 	protected void drawableStateChanged() {
 		super.drawableStateChanged();
-		if (mForeground != null && mForeground.isStateful()) {
-			mForeground.setState(getDrawableState());
-		}
+		mForegroundViewHelper.drawableStateChanged();
 	}
 
 	@Override
 	protected void onDraw(final Canvas canvas) {
 		super.onDraw(canvas);
-		if (mForeground != null) {
-			final Drawable foreground = mForeground;
-
-			if (mForegroundBoundsChanged) {
-				mForegroundBoundsChanged = false;
-				final Rect selfBounds = mSelfBounds;
-				final Rect overlayBounds = mOverlayBounds;
-
-				final int w = getRight() - getLeft();
-				final int h = getBottom() - getTop();
-
-				if (mForegroundInPadding) {
-					selfBounds.set(0, 0, w, h);
-				} else {
-					selfBounds.set(getPaddingLeft(), getPaddingTop(), w - getPaddingRight(), h - getPaddingBottom());
-				}
-
-				final int layoutDirection = ViewCompat.getLayoutDirection(this);
-				GravityCompat.apply(mForegroundGravity, foreground.getIntrinsicWidth(),
-						foreground.getIntrinsicHeight(), selfBounds, overlayBounds, layoutDirection);
-				foreground.setBounds(overlayBounds);
-			}
-
-			foreground.draw(canvas);
-		}
+		mForegroundViewHelper.dispatchOnDraw(canvas);
 	}
 
 	@Override
 	protected void onLayout(final boolean changed, final int left, final int top, final int right, final int bottom) {
-		mForegroundBoundsChanged = true;
+		mForegroundViewHelper.dispatchOnLayout(changed, left, top, right, bottom);
 		super.onLayout(changed, left, top, right, bottom);
 	}
 
 	@Override
 	protected void onSizeChanged(final int w, final int h, final int oldw, final int oldh) {
 		super.onSizeChanged(w, h, oldw, oldh);
-		mForegroundBoundsChanged = true;
+		mForegroundViewHelper.dispatchOnSizeChanged(w, h, oldw, oldh);
 	}
 
 	@Override
 	protected boolean verifyDrawable(final Drawable who) {
-		return super.verifyDrawable(who) || who == mForeground;
+		return super.verifyDrawable(who) || mForegroundViewHelper.verifyDrawable(who);
 	}
 
 }

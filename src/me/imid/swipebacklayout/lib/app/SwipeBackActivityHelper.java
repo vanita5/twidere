@@ -3,10 +3,7 @@ package me.imid.swipebacklayout.lib.app;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
@@ -15,12 +12,15 @@ import me.imid.swipebacklayout.lib.SwipeBackLayout;
 
 import org.mariotaku.twidere.R;
 import org.mariotaku.twidere.TwidereConstants;
+import org.mariotaku.twidere.app.TwidereApplication;
+import org.mariotaku.twidere.graphic.EmptyDrawable;
+import org.mariotaku.twidere.util.SwipebackActivityUtils.SwipebackScreenshotManager;
 
 /**
  * @author Yrom
  * 
  */
-public class SwipeBackActivityHelper {
+public class SwipeBackActivityHelper implements TwidereConstants {
 	private final Activity mActivity;
 	private SwipeBackLayout mSwipeBackLayout;
 
@@ -39,17 +39,29 @@ public class SwipeBackActivityHelper {
 
 	public void onActivtyCreate() {
 		final Window w = mActivity.getWindow();
-		w.setBackgroundDrawable(new ColorDrawable(0));
+		w.setBackgroundDrawable(new EmptyDrawable());
 		mSwipeBackLayout = (SwipeBackLayout) LayoutInflater.from(mActivity).inflate(R.layout.swipeback_layout, null);
+	}
+
+	public void onDestroy() {
+		if (mActivity.isFinishing()) {
+			final Intent intent = mActivity.getIntent();
+			final TwidereApplication app = TwidereApplication.getInstance(mActivity);
+			final SwipebackScreenshotManager sm = app.getSwipebackScreenshotManager();
+			sm.remove(intent.getLongExtra(EXTRA_ACTIVITY_SCREENSHOT_ID, -1));
+		}
 	}
 
 	public void onPostCreate() {
 		mSwipeBackLayout.attachToActivity(mActivity);
 		final Intent intent = mActivity.getIntent();
-		final byte[] shot = intent.getByteArrayExtra(TwidereConstants.EXTRA_ACTIVITY_SCREENSHOT_ENCODED);
-		final Bitmap b = shot != null ? BitmapFactory.decodeByteArray(shot, 0, shot.length) : null;
-		final Drawable d = b != null ? new BitmapDrawable(mActivity.getResources(), b) : new ColorDrawable(0);
-		mSwipeBackLayout.setWindowBackgroundDrawable(d);
+		final TwidereApplication app = TwidereApplication.getInstance(mActivity);
+		final SwipebackScreenshotManager sm = app.getSwipebackScreenshotManager();
+		final Bitmap b = sm.get(intent.getLongExtra(EXTRA_ACTIVITY_SCREENSHOT_ID, -1));
+		if (b != null) {
+			mSwipeBackLayout.setWindowBackgroundDrawable(new BitmapDrawable(mActivity.getResources(), b));
+		}
+		mSwipeBackLayout.setEnableGesture(b != null);
 	}
 
 }

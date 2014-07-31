@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-	xmlns:twidere="http://schemas.android.com/apk/res/org.mariotaku.twidere"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
 	android:title="@string/notifications">
+
+	<org.mariotaku.twidere.preference.NotificationContentPreference
+		android:key="content_to_notify"
+		android:title="@string/content_to_notify"/>
 
 	<org.mariotaku.twidere.preference.RingtonePreference
 		android:key="notification_ringtone"
@@ -18,15 +22,33 @@
 		<org.mariotaku.twidere.preference.NotificationTypePreference
 			android:key="notification_type_home"
 			android:title="@string/home"
-			twidere:notificationType="none"/>
+			app:dependencyKey="home_timeline_notification"
+			app:dependencyValueDefault="false"
+			app:dependencyValues="@array/dependency_values_true"
+			app:notificationType="none"/>
 		<org.mariotaku.twidere.preference.NotificationTypePreference
 			android:key="notification_type_mentions"
 			android:title="@string/mentions"
-			twidere:notificationType="vibration|light"/>
+			app:dependencyKey="mentions_notification"
+			app:dependencyValueDefault="false"
+			app:dependencyValues="@array/dependency_values_true"
+			app:notificationType="vibration|light"/>
 		<org.mariotaku.twidere.preference.NotificationTypePreference
 			android:key="notification_type_direct_messages"
 			android:title="@string/direct_messages"
-			twidere:notificationType="ringtone|vibration|light"/>
+			app:dependencyKey="direct_messages_notification"
+			app:dependencyValueDefault="false"
+			app:dependencyValues="@array/dependency_values_true"
+			app:notificationType="ringtone|vibration|light"/>
+	</PreferenceCategory>
+	<PreferenceCategory
+		android:key="cat_other_settings"
+		android:title="@string/other_settings">
+		<org.mariotaku.twidere.preference.AutoFixCheckBoxPreference
+			android:defaultValue="false"
+			android:key="my_following_only"
+			android:summary="@string/my_following_only_summary"
+			android:title="@string/my_following_only"/>
 	</PreferenceCategory>
 
 </PreferenceScreen>

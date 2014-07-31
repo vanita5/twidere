@@ -1,20 +1,20 @@
 /*
- *				Twidere - Twitter client for Android
+ * 				Twidere - Twitter client for Android
  * 
- * Copyright (C) 2012 Mariotaku Lee <mariotaku.lee@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.mariotaku.twidere.fragment.support;
@@ -45,7 +45,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import org.mariotaku.twidere.Constants;
-import org.mariotaku.twidere.activity.HomeActivity;
+import org.mariotaku.twidere.activity.support.HomeActivity;
 import org.mariotaku.twidere.app.TwidereApplication;
 import org.mariotaku.twidere.fragment.iface.IBaseFragment;
 import org.mariotaku.twidere.fragment.iface.RefreshScrollTopInterface;
@@ -58,10 +58,11 @@ import org.mariotaku.twidere.util.Utils;
 public class BaseSupportListFragment extends ListFragment implements IBaseFragment, Constants, OnScrollListener,
 		RefreshScrollTopInterface {
 
-	private boolean mActivityFirstCreated;
 	private boolean mIsInstanceStateSaved;
 
 	private boolean mReachedBottom, mNotReachedBottomBefore;
+
+	private LayoutInflater mLayoutInflater;
 
 	public final TwidereApplication getApplication() {
 		return TwidereApplication.getInstance(getActivity());
@@ -71,6 +72,12 @@ public class BaseSupportListFragment extends ListFragment implements IBaseFragme
 		final Activity activity = getActivity();
 		if (activity != null) return activity.getContentResolver();
 		return null;
+	}
+
+	@Override
+	public LayoutInflater getLayoutInflater(final Bundle savedInstanceState) {
+		if (mLayoutInflater != null) return mLayoutInflater;
+		return mLayoutInflater = ThemeUtils.getThemedLayoutInflaterForActionIcons(getActivity());
 	}
 
 	public final MultiSelectManager getMultiSelectManager() {
@@ -105,10 +112,6 @@ public class BaseSupportListFragment extends ListFragment implements IBaseFragme
 		activity.invalidateOptionsMenu();
 	}
 
-	public boolean isActivityFirstCreated() {
-		return mActivityFirstCreated;
-	}
-
 	public boolean isInstanceStateSaved() {
 		return mIsInstanceStateSaved;
 	}
@@ -129,12 +132,6 @@ public class BaseSupportListFragment extends ListFragment implements IBaseFragme
 	@Override
 	public void onAttach(final Activity activity) {
 		super.onAttach(activity);
-	}
-
-	@Override
-	public void onCreate(final Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		mActivityFirstCreated = true;
 	}
 
 	/**
@@ -203,12 +200,6 @@ public class BaseSupportListFragment extends ListFragment implements IBaseFragme
 	}
 
 	@Override
-	public void onDestroy() {
-		super.onDestroy();
-		mActivityFirstCreated = true;
-	}
-
-	@Override
 	public void onDetach() {
 		super.onDetach();
 		final Activity activity = getActivity();
@@ -254,12 +245,6 @@ public class BaseSupportListFragment extends ListFragment implements IBaseFragme
 		onPostStart();
 	}
 
-	@Override
-	public void onStop() {
-		mActivityFirstCreated = false;
-		super.onStop();
-	}
-
 	public void registerReceiver(final BroadcastReceiver receiver, final IntentFilter filter) {
 		final Activity activity = getActivity();
 		if (activity == null) return;
@@ -284,6 +269,7 @@ public class BaseSupportListFragment extends ListFragment implements IBaseFragme
 
 	@Override
 	public void setSelection(final int position) {
+		if (getView() == null) return;
 		Utils.scrollListToPosition(getListView(), position);
 	}
 

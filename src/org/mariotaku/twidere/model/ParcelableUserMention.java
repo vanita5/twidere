@@ -1,3 +1,22 @@
+/*
+ * 				Twidere - Twitter client for Android
+ * 
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.mariotaku.twidere.model;
 
 import android.os.Parcel;
@@ -10,6 +29,7 @@ import org.mariotaku.jsonserializer.JSONParcel;
 import org.mariotaku.jsonserializer.JSONParcelable;
 import org.mariotaku.jsonserializer.JSONSerializer;
 
+import twitter4j.Status;
 import twitter4j.UserMentionEntity;
 
 public class ParcelableUserMention implements Parcelable, JSONParcelable {
@@ -25,7 +45,6 @@ public class ParcelableUserMention implements Parcelable, JSONParcelable {
 			return new ParcelableUserMention[size];
 		}
 	};
-
 	public static final JSONParcelable.Creator<ParcelableUserMention> JSON_CREATOR = new JSONParcelable.Creator<ParcelableUserMention>() {
 		@Override
 		public ParcelableUserMention createFromParcel(final JSONParcel in) {
@@ -37,8 +56,8 @@ public class ParcelableUserMention implements Parcelable, JSONParcelable {
 			return new ParcelableUserMention[size];
 		}
 	};
-
 	public long id;
+
 	public String name, screen_name;
 
 	public ParcelableUserMention(final JSONParcel in) {
@@ -104,10 +123,14 @@ public class ParcelableUserMention implements Parcelable, JSONParcelable {
 	public static ParcelableUserMention[] fromJSONString(final String json) {
 		if (TextUtils.isEmpty(json)) return null;
 		try {
-			return JSONSerializer.arrayFromJSON(JSON_CREATOR, new JSONArray(json));
+			return JSONSerializer.createArray(JSON_CREATOR, new JSONArray(json));
 		} catch (final JSONException e) {
 			return null;
 		}
+	}
+
+	public static ParcelableUserMention[] fromStatus(final Status status) {
+		return fromUserMentionEntities(status.getUserMentionEntities());
 	}
 
 	public static ParcelableUserMention[] fromUserMentionEntities(final UserMentionEntity[] entities) {
@@ -118,4 +141,22 @@ public class ParcelableUserMention implements Parcelable, JSONParcelable {
 		}
 		return mentions;
 	}
+
+	public static boolean hasMention(final ParcelableUserMention[] mentions, final long id) {
+		if (mentions == null) return false;
+		for (final ParcelableUserMention mention : mentions) {
+			if (mention.id == id) return true;
+		}
+		return false;
+	}
+
+	public static boolean hasMention(final String json, final long id) {
+		final ParcelableUserMention[] mentions = fromJSONString(json);
+		if (mentions == null) return false;
+		for (final ParcelableUserMention mention : mentions) {
+			if (mention.id == id) return true;
+		}
+		return false;
+	}
+
 }

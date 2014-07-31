@@ -1,18 +1,18 @@
 /*
  * 				Twidere - Twitter client for Android
- *
- *  Copyright (C) 2012-2013 Mariotaku Lee <mariotaku.lee@gmail.com>
- *
+ * 
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
- *
+ * 
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *
+ * 
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -51,10 +51,10 @@ import de.keyboardsurfer.android.widget.crouton.Crouton;
 import de.keyboardsurfer.android.widget.crouton.CroutonLifecycleCallback;
 import de.keyboardsurfer.android.widget.crouton.CroutonStyle;
 
-import org.mariotaku.popupmenu.PopupMenu;
+import org.mariotaku.menucomponent.widget.PopupMenu;
 import org.mariotaku.twidere.R;
 import org.mariotaku.twidere.app.TwidereApplication;
-import org.mariotaku.twidere.loader.ParcelableUserLoader;
+import org.mariotaku.twidere.loader.support.ParcelableUserLoader;
 import org.mariotaku.twidere.model.ParcelableUser;
 import org.mariotaku.twidere.model.SingleResponse;
 import org.mariotaku.twidere.task.AsyncTask;
@@ -67,11 +67,12 @@ import org.mariotaku.twidere.util.ImageLoaderWrapper;
 import org.mariotaku.twidere.util.ParseUtils;
 import org.mariotaku.twidere.util.TwitterWrapper;
 import org.mariotaku.twidere.view.ProfileImageBannerLayout;
+import org.mariotaku.twidere.view.ProfileImageView;
 import org.mariotaku.twidere.view.iface.IExtendedView.OnSizeChangedListener;
 
 import java.io.File;
 
-public class UserProfileEditorActivity extends TwidereSwipeBackActivity implements OnSizeChangedListener, TextWatcher,
+public class UserProfileEditorActivity extends BaseSupportActivity implements OnSizeChangedListener, TextWatcher,
 		OnClickListener, CroutonLifecycleCallback, LoaderCallbacks<SingleResponse<ParcelableUser>> {
 
 	private static final int LOADER_ID_USER = 1;
@@ -84,7 +85,8 @@ public class UserProfileEditorActivity extends TwidereSwipeBackActivity implemen
 	private AsyncTask<Void, Void, ?> mTask;
 
 	private ProfileImageBannerLayout mProfileImageBannerLayout;
-	private ImageView mProfileImageView, mProfileBannerView;
+	private ProfileImageView mProfileImageView;
+	private ImageView mProfileBannerView;
 	private EditText mEditName, mEditDescription, mEditLocation, mEditUrl;
 	private View mProgress, mContent;
 
@@ -348,14 +350,15 @@ public class UserProfileEditorActivity extends TwidereSwipeBackActivity implemen
 	protected void onCreate(final Bundle savedInstanceState) {
 		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		super.onCreate(savedInstanceState);
-		final Bundle extras = getIntent().getExtras();
-		if (extras == null || !isMyAccount(this, extras.getLong(EXTRA_ACCOUNT_ID))) {
+		final Intent intent = getIntent();
+		final long accountId = intent.getLongExtra(EXTRA_ACCOUNT_ID, -1);
+		if (!isMyAccount(this, accountId)) {
 			finish();
 			return;
 		}
 		mAsyncTaskManager = TwidereApplication.getInstance(this).getAsyncTaskManager();
 		mLazyImageLoader = TwidereApplication.getInstance(this).getImageLoaderWrapper();
-		mAccountId = extras.getLong(EXTRA_ACCOUNT_ID);
+		mAccountId = accountId;
 		setContentView(R.layout.edit_user_profile);
 		// setOverrideExitAniamtion(false);
 		getActionBar().setDisplayHomeAsUpEnabled(true);
@@ -528,7 +531,7 @@ public class UserProfileEditorActivity extends TwidereSwipeBackActivity implemen
 		@Override
 		protected void onPostExecute(final SingleResponse<Boolean> result) {
 			super.onPostExecute(result);
-			if (result != null && result.data != null && result.data) {
+			if (result.data != null && result.data) {
 				getUserInfo();
 				Toast.makeText(UserProfileEditorActivity.this, R.string.profile_banner_image_updated,
 						Toast.LENGTH_SHORT).show();

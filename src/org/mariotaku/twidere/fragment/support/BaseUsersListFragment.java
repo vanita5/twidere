@@ -1,25 +1,24 @@
 /*
- *				Twidere - Twitter client for Android
+ * 				Twidere - Twitter client for Android
  * 
- * Copyright (C) 2012 Mariotaku Lee <mariotaku.lee@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.mariotaku.twidere.fragment.support;
 
-import static org.mariotaku.twidere.util.Utils.addIntentToMenu;
 import static org.mariotaku.twidere.util.Utils.clearListViewChoices;
 import static org.mariotaku.twidere.util.Utils.configBaseCardAdapter;
 import static org.mariotaku.twidere.util.Utils.getActivatedAccountIds;
@@ -27,13 +26,11 @@ import static org.mariotaku.twidere.util.Utils.openUserProfile;
 
 import android.content.ActivityNotFoundException;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager.LoaderCallbacks;
 import android.support.v4.content.Loader;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MenuItem.OnMenuItemClickListener;
 import android.view.View;
@@ -41,15 +38,14 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.ListView;
 
-import org.mariotaku.popupmenu.PopupMenu;
-import org.mariotaku.twidere.R;
 import org.mariotaku.twidere.adapter.ParcelableUsersAdapter;
 import org.mariotaku.twidere.adapter.iface.IBaseCardAdapter.MenuButtonClickListener;
-import org.mariotaku.twidere.loader.DummyParcelableUsersLoader;
+import org.mariotaku.twidere.loader.support.DummyParcelableUsersLoader;
 import org.mariotaku.twidere.model.Panes;
 import org.mariotaku.twidere.model.ParcelableUser;
 import org.mariotaku.twidere.util.MultiSelectManager;
-import org.mariotaku.twidere.util.NoDuplicatesArrayList;
+import org.mariotaku.twidere.util.Utils;
+import org.mariotaku.twidere.util.collection.NoDuplicatesArrayList;
 
 import java.util.Collections;
 import java.util.List;
@@ -59,7 +55,6 @@ abstract class BaseUsersListFragment extends BasePullToRefreshListFragment imple
 		MultiSelectManager.Callback, MenuButtonClickListener {
 
 	private SharedPreferences mPreferences;
-	private PopupMenu mPopupMenu;
 	private MultiSelectManager mMultiSelectManager;
 
 	private ParcelableUsersAdapter mAdapter;
@@ -67,9 +62,9 @@ abstract class BaseUsersListFragment extends BasePullToRefreshListFragment imple
 	private boolean mLoadMoreAutomatically;
 	private ListView mListView;
 	private long mAccountId;
+
 	private final List<ParcelableUser> mData = Collections
 			.synchronizedList(new NoDuplicatesArrayList<ParcelableUser>());
-
 	private ParcelableUser mSelectedUser;
 
 	public long getAccountId() {
@@ -111,7 +106,7 @@ abstract class BaseUsersListFragment extends BasePullToRefreshListFragment imple
 		mAdapter.setMenuButtonClickListener(this);
 		mMultiSelectManager = getMultiSelectManager();
 		mListView = getListView();
-		mListView.setFastScrollEnabled(mPreferences.getBoolean(PREFERENCE_KEY_FAST_SCROLL_THUMB, false));
+		mListView.setFastScrollEnabled(mPreferences.getBoolean(KEY_FAST_SCROLL_THUMB, false));
 		final Bundle args = getArguments() != null ? getArguments() : new Bundle();
 		final long account_id = args.getLong(EXTRA_ACCOUNT_ID, -1);
 		if (mAccountId != account_id) {
@@ -215,15 +210,21 @@ abstract class BaseUsersListFragment extends BasePullToRefreshListFragment imple
 	}
 
 	@Override
-	public void onRefreshStarted() {
-		super.onRefreshStarted();
+	public void onRefreshFromEnd() {
+		if (mLoadMoreAutomatically) return;
+		loadMoreUsers();
+	}
+
+	@Override
+	public void onRefreshFromStart() {
+		if (isRefreshing()) return;
 		getLoaderManager().restartLoader(0, getArguments(), this);
 	}
 
 	@Override
 	public void onResume() {
 		super.onResume();
-		mLoadMoreAutomatically = mPreferences.getBoolean(PREFERENCE_KEY_LOAD_MORE_AUTOMATICALLY, false);
+		mLoadMoreAutomatically = mPreferences.getBoolean(KEY_LOAD_MORE_AUTOMATICALLY, false);
 		configBaseCardAdapter(getActivity(), mAdapter);
 	}
 
@@ -231,15 +232,26 @@ abstract class BaseUsersListFragment extends BasePullToRefreshListFragment imple
 	public void onStart() {
 		super.onStart();
 		mMultiSelectManager.registerCallback(this);
+		final int choiceMode = mListView.getChoiceMode();
+		if (mMultiSelectManager.isActive()) {
+			if (choiceMode != ListView.CHOICE_MODE_MULTIPLE) {
+				mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+			}
+		} else {
+			if (choiceMode != ListView.CHOICE_MODE_NONE) {
+				Utils.clearListViewChoices(mListView);
+			}
+		}
 	}
 
 	@Override
 	public void onStop() {
 		mMultiSelectManager.unregisterCallback(this);
-		if (mPopupMenu != null) {
-			mPopupMenu.dismiss();
-		}
 		super.onStop();
+	}
+
+	protected UserMenuDialogFragment createMenuDialog() {
+		return new UserMenuDialogFragment();
 	}
 
 	protected ParcelableUser getSelectedUser() {
@@ -247,16 +259,10 @@ abstract class BaseUsersListFragment extends BasePullToRefreshListFragment imple
 	}
 
 	protected int getUserMenuResource() {
-		return R.menu.action_user_list;
+		return 0;
 	}
 
 	protected abstract Loader<List<ParcelableUser>> newLoaderInstance(Context context, Bundle args);
-
-	@Override
-	protected void onPullUp() {
-		if (mLoadMoreAutomatically) return;
-		loadMoreUsers();
-	}
 
 	protected final void removeUsers(final long... user_ids) {
 		if (user_ids == null || user_ids.length == 0) return;
@@ -282,18 +288,10 @@ abstract class BaseUsersListFragment extends BasePullToRefreshListFragment imple
 	private void showMenu(final View view, final ParcelableUser user) {
 		mSelectedUser = user;
 		if (view == null || user == null) return;
-		if (mPopupMenu != null && mPopupMenu.isShowing()) {
-			mPopupMenu.dismiss();
-		}
-		mPopupMenu = PopupMenu.getInstance(getActivity(), view);
-		mPopupMenu.inflate(getUserMenuResource());
-		final Menu menu = mPopupMenu.getMenu();
-		final Intent extensions_intent = new Intent(INTENT_ACTION_EXTENSION_OPEN_USER);
-		final Bundle extensions_extras = new Bundle();
-		extensions_extras.putParcelable(EXTRA_USER, user);
-		extensions_intent.putExtras(extensions_extras);
-		addIntentToMenu(getActivity(), menu, extensions_intent);
-		mPopupMenu.setOnMenuItemClickListener(this);
-		mPopupMenu.show();
+		final UserMenuDialogFragment df = createMenuDialog();
+		final Bundle args = new Bundle();
+		args.putParcelable(EXTRA_USER, user);
+		df.setArguments(args);
+		df.show(getChildFragmentManager(), "user_menu");
 	}
 }

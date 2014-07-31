@@ -1,21 +1,22 @@
 /*
- *				Twidere - Twitter client for Android
- *
- * Copyright (C) 2012-2013 Mariotaku Lee <mariotaku.lee@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 				Twidere - Twitter client for Android
+ * 
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.mariotaku.twidere;
 
 /**
@@ -28,10 +29,16 @@ package org.mariotaku.twidere;
 public interface Constants extends TwidereConstants {
 
 	public static final String DATABASES_NAME = "twidere.sqlite";
-	public static final int DATABASES_VERSION = 51;
+	public static final int DATABASES_VERSION = 57;
 
 	public static final String GOOGLE_MAPS_API_KEY_RELEASE = "0kjPwJOe_zwYjzGc9uYak7vhm_Sf3eob-2L3Xzw";
 	public static final String GOOGLE_MAPS_API_KEY_DEBUG = "0kjPwJOe_zwY9p6kT-kygu4mxwysyOOpfkaXqTA";
+
+	public static final int MENU_GROUP_STATUS_EXTENSION = 10;
+	public static final int MENU_GROUP_COMPOSE_EXTENSION = 11;
+	public static final int MENU_GROUP_IMAGE_EXTENSION = 12;
+	public static final int MENU_GROUP_USER_EXTENSION = 13;
+	public static final int MENU_GROUP_STATUS_SHARE = 20;
 
 	public static final int MENU_HOME = android.R.id.home;
 	public static final int MENU_SEARCH = R.id.search;
@@ -79,11 +86,9 @@ public interface Constants extends TwidereConstants {
 	public static final int MENU_UP = R.id.up;
 	public static final int MENU_DOWN = R.id.down;
 	public static final int MENU_MULTI_SELECT = R.id.multi_select;
-	public static final int MENU_CLEAR_COLOR = R.id.clear_color;
 	public static final int MENU_COPY = R.id.copy;
 	public static final int MENU_TOGGLE_SENSITIVE = R.id.toggle_sensitive;
 	public static final int MENU_REVOKE = R.id.revoke;
-	public static final int MENU_IMPORT_FROM = R.id.import_from;
 	public static final int MENU_ADD_TO_LIST = R.id.add_to_list;
 	public static final int MENU_DELETE_FROM_LIST = R.id.delete_from_list;
 	public static final int MENU_STATUSES = R.id.statuses;
@@ -97,6 +102,14 @@ public interface Constants extends TwidereConstants {
 	public static final int MENU_ADD_TO_FILTER = R.id.add_to_filter;
 	public static final int MENU_FOLLOW = R.id.follow;
 	public static final int MENU_UNFOLLOW = R.id.unfollow;
+	public static final int MENU_BACK = R.id.back;
+	public static final int MENU_TRANSLATE = R.id.translate;
+	public static final int MENU_ACCEPT = R.id.accept;
+	public static final int MENU_DENY = R.id.deny;
+	public static final int MENU_IMPORT_SETTINGS = R.id.import_settings;
+	public static final int MENU_EXPORT_SETTINGS = R.id.export_settings;
+	public static final int MENU_PROGRESS = R.id.progress;
+	public static final int MENU_OPEN_WITH_ACCOUNT = R.id.open_with_account;
 
 	public static final int LINK_ID_STATUS = 1;
 	public static final int LINK_ID_USER = 2;
@@ -118,13 +131,11 @@ public interface Constants extends TwidereConstants {
 	public static final int LINK_ID_USERS = 23;
 	public static final int LINK_ID_STATUSES = 24;
 	public static final int LINK_ID_STATUS_RETWEETERS = 25;
-	public static final int LINK_ID_SEARCH = 26;
+	public static final int LINK_ID_STATUS_REPLIES = 26;
+	public static final int LINK_ID_SEARCH = 27;
 
 	public static final String DIR_NAME_IMAGE_CACHE = "image_cache";
 	public static final String DIR_NAME_FULL_IMAGE_CACHE = "full_image_cache";
-
-	public static final int PANE_LEFT = R.id.fragment_container_left;
-	public static final int PANE_RIGHT = R.id.fragment_container_right;
 
 	public static final String FRAGMENT_TAG_API_UPGRADE_NOTICE = "api_upgrade_notice";
 
@@ -137,7 +148,9 @@ public interface Constants extends TwidereConstants {
 	public static final int HONDAJOJO_ID = 514378421;
 	public static final String HONDAJOJO_SCREEN_NAME = "@HondaJOJO";
 	public static final String EASTER_EGG_TRIGGER_TEXT = "\u718A\u5B69\u5B50";
-	public static final String EASTER_EGG_RESTORE_TEXT = "\u5927\u738B\u5C0F\u7684\u77E5\u9519\u4E86";
+	public static final String EASTER_EGG_RESTORE_TEXT_PART1 = "\u5927\u738B";
+	public static final String EASTER_EGG_RESTORE_TEXT_PART2 = "\u5C0F\u7684";
+	public static final String EASTER_EGG_RESTORE_TEXT_PART3 = "\u77E5\u9519";
 
 	public static final float DEFAULT_PULL_TO_REFRESH_SCROLL_DISTANCE = 0.3f;
 
@@ -151,5 +164,17 @@ public interface Constants extends TwidereConstants {
 	public static final int HOLO_BLUE_LIGHT = 0xff33b5e5;
 	public static final int HOLO_PURPLE_DARK = 0xff9933cc;
 	public static final int HOLO_PURPLE_LIGHT = 0xffaa66cc;
+
+	public static final String ENTRY_PREFERENCES = "preferences.json";
+	public static final String ENTRY_NICKNAMES = "nicknames.json";
+	public static final String ENTRY_USER_COLORS = "user_colors.json";
+	public static final String ENTRY_HOST_MAPPING = "host_mapping.json";
+
+	public static final int FLAG_PREFERENCES = 0x1;
+	public static final int FLAG_NICKNAMES = 0x2;
+	public static final int FLAG_USER_COLORS = 0x4;
+	public static final int FLAG_HOST_MAPPING = 0x8;
+
+	public static final int FLAG_ALL = FLAG_PREFERENCES | FLAG_NICKNAMES | FLAG_USER_COLORS | FLAG_HOST_MAPPING;
 
 }

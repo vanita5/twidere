@@ -1,3 +1,22 @@
+/*
+ * 				Twidere - Twitter client for Android
+ * 
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.mariotaku.twidere.activity.support;
 
 import static android.text.TextUtils.isEmpty;
@@ -101,6 +120,7 @@ public class UserListSelectorActivity extends BaseSupportDialogActivity implemen
 			if (user == null) return;
 			if (isSelectingUser()) {
 				final Intent data = new Intent();
+				data.setExtrasClassLoader(getClassLoader());
 				data.putExtra(EXTRA_USER, user);
 				setResult(RESULT_OK, data);
 				finish();
@@ -129,7 +149,7 @@ public class UserListSelectorActivity extends BaseSupportDialogActivity implemen
 			finish();
 			return;
 		}
-		setContentView(R.layout.user_list_selector);
+		setContentView(R.layout.activity_user_list_selector);
 		if (savedInstanceState == null) {
 			mScreenName = intent.getStringExtra(EXTRA_SCREEN_NAME);
 		} else {
@@ -212,21 +232,17 @@ public class UserListSelectorActivity extends BaseSupportDialogActivity implemen
 		private final UserListSelectorActivity mActivity;
 		private final long mAccountId;
 		private final String mScreenName;
-		private final boolean mLargeProfileImage;
 
 		GetUserListsTask(final UserListSelectorActivity activity, final long account_id, final String screen_name) {
 			mActivity = activity;
 			mAccountId = account_id;
 			mScreenName = screen_name;
-			mLargeProfileImage = activity.getResources().getBoolean(R.bool.hires_profile_image);
 		}
 
 		@Override
 		protected SingleResponse<List<ParcelableUserList>> doInBackground(final Void... params) {
 			final Twitter twitter = getTwitterInstance(mActivity, mAccountId, false);
-			if (twitter == null) {
-				SingleResponse.nullInstance();
-			}
+			if (twitter == null) return SingleResponse.nullInstance();
 			try {
 				final ResponseList<UserList> lists = twitter.getUserLists(mScreenName);
 				final List<ParcelableUserList> data = new ArrayList<ParcelableUserList>();
@@ -237,15 +253,15 @@ public class UserListSelectorActivity extends BaseSupportDialogActivity implemen
 						if (!is_my_account && user.getId() == mAccountId) {
 							is_my_account = true;
 						}
-						data.add(new ParcelableUserList(item, mAccountId, mLargeProfileImage));
+						data.add(new ParcelableUserList(item, mAccountId));
 					}
 				}
-				final SingleResponse<List<ParcelableUserList>> result = SingleResponse.dataOnly(data);
+				final SingleResponse<List<ParcelableUserList>> result = SingleResponse.withData(data);
 				result.extras.putBoolean(EXTRA_IS_MY_ACCOUNT, is_my_account);
 				return result;
 			} catch (final TwitterException e) {
 				e.printStackTrace();
-				return SingleResponse.exceptionOnly(e);
+				return SingleResponse.withException(e);
 			}
 		}
 
@@ -278,31 +294,27 @@ public class UserListSelectorActivity extends BaseSupportDialogActivity implemen
 		private final UserListSelectorActivity mActivity;
 		private final long mAccountId;
 		private final String mName;
-		private final boolean mLargeProfileImage;
 
 		SearchUsersTask(final UserListSelectorActivity activity, final long account_id, final String name) {
 			mActivity = activity;
 			mAccountId = account_id;
 			mName = name;
-			mLargeProfileImage = activity.getResources().getBoolean(R.bool.hires_profile_image);
 		}
 
 		@Override
 		protected SingleResponse<List<ParcelableUser>> doInBackground(final Void... params) {
 			final Twitter twitter = getTwitterInstance(mActivity, mAccountId, false);
-			if (twitter == null) {
-				SingleResponse.nullInstance();
-			}
+			if (twitter == null) return SingleResponse.nullInstance();
 			try {
 				final ResponseList<User> lists = twitter.searchUsers(mName, 1);
 				final List<ParcelableUser> data = new ArrayList<ParcelableUser>();
 				for (final User item : lists) {
-					data.add(new ParcelableUser(item, mAccountId, mLargeProfileImage));
+					data.add(new ParcelableUser(item, mAccountId));
 				}
-				return SingleResponse.dataOnly(data);
+				return SingleResponse.withData(data);
 			} catch (final TwitterException e) {
 				e.printStackTrace();
-				return SingleResponse.exceptionOnly(e);
+				return SingleResponse.withException(e);
 			}
 		}
 

@@ -1,20 +1,20 @@
 /*
- *				Twidere - Twitter client for Android
+ * 				Twidere - Twitter client for Android
  * 
- * Copyright (C) 2012 Mariotaku Lee <mariotaku.lee@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.mariotaku.twidere.activity.support;
@@ -23,7 +23,7 @@ import static org.mariotaku.twidere.util.CustomTabUtils.findTabIconKey;
 import static org.mariotaku.twidere.util.CustomTabUtils.getIconMap;
 import static org.mariotaku.twidere.util.CustomTabUtils.getTabConfiguration;
 import static org.mariotaku.twidere.util.CustomTabUtils.getTabTypeName;
-import static org.mariotaku.twidere.util.Utils.getUserNickname;
+import static org.mariotaku.twidere.util.UserColorNicknameUtils.getUserNickname;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -50,13 +50,14 @@ import org.mariotaku.twidere.adapter.AccountsSpinnerAdapter;
 import org.mariotaku.twidere.adapter.ArrayAdapter;
 import org.mariotaku.twidere.app.TwidereApplication;
 import org.mariotaku.twidere.fragment.support.BaseSupportDialogFragment;
-import org.mariotaku.twidere.graphic.DropShadowDrawable;
 import org.mariotaku.twidere.model.Account;
 import org.mariotaku.twidere.model.CustomTabConfiguration;
 import org.mariotaku.twidere.model.ParcelableUser;
 import org.mariotaku.twidere.model.ParcelableUserList;
 import org.mariotaku.twidere.util.ImageLoaderWrapper;
 import org.mariotaku.twidere.util.ParseUtils;
+import org.mariotaku.twidere.util.ThemeUtils;
+import org.mariotaku.twidere.util.accessor.ViewAccessor;
 
 import java.text.Collator;
 import java.util.Comparator;
@@ -181,9 +182,9 @@ public class CustomTabEditorActivity extends BaseSupportDialogActivity implement
 		final TextView text1 = (TextView) view.findViewById(android.R.id.text1);
 		final TextView text2 = (TextView) view.findViewById(android.R.id.text2);
 		final ImageView icon = (ImageView) view.findViewById(android.R.id.icon);
-		final boolean display_profile_image = mPreferences.getBoolean(PREFERENCE_KEY_DISPLAY_PROFILE_IMAGE, true);
-		final boolean nickname_only = mPreferences.getBoolean(PREFERENCE_KEY_NICKNAME_ONLY, false);
-		final boolean display_name = mPreferences.getBoolean(PREFERENCE_KEY_NAME_FIRST, true);
+		final boolean display_profile_image = mPreferences.getBoolean(KEY_DISPLAY_PROFILE_IMAGE, true);
+		final boolean nickname_only = mPreferences.getBoolean(KEY_NICKNAME_ONLY, false);
+		final boolean display_name = mPreferences.getBoolean(KEY_NAME_FIRST, true);
 		text1.setVisibility(View.VISIBLE);
 		text2.setVisibility(View.VISIBLE);
 		icon.setVisibility(display_profile_image ? View.VISIBLE : View.GONE);
@@ -251,7 +252,7 @@ public class CustomTabEditorActivity extends BaseSupportDialogActivity implement
 		}
 		mTabId = intent.getLongExtra(EXTRA_ID, -1);
 		setTitle(isEditMode() ? R.string.edit_tab : R.string.add_tab);
-		setContentView(R.layout.custom_tab_editor);
+		setContentView(R.layout.activity_custom_tab_editor);
 		mTabTypeName.setText(getTabTypeName(this, type));
 		mTabIconsAdapter = new CustomTabIconsAdapter(this);
 		mTabIconsAdapter.setData(getIconMap());
@@ -269,11 +270,12 @@ public class CustomTabEditorActivity extends BaseSupportDialogActivity implement
 			final boolean account_id_none = conf.getAccountRequirement() == CustomTabConfiguration.ACCOUNT_NONE;
 			mAccountContainer.setVisibility(account_id_none ? View.GONE : View.VISIBLE);
 			mSecondaryFieldContainer.setVisibility(has_secondary_field ? View.VISIBLE : View.GONE);
-			final boolean account_id_required = conf.getAccountRequirement() == CustomTabConfiguration.ACCOUNT_REQUIRED;
-			if (!account_id_required) {
+			final boolean accountIdRequired = conf.getAccountRequirement() == CustomTabConfiguration.ACCOUNT_REQUIRED;
+			if (!accountIdRequired) {
 				mAccountsAdapter.add(Account.dummyInstance());
 			}
-			mAccountsAdapter.addAll(Account.getAccounts(this, false));
+			final boolean officialKeyOnly = intent.getBooleanExtra(EXTRA_OFFICIAL_KEY_ONLY, false);
+			mAccountsAdapter.addAll(Account.getAccountsList(this, false, officialKeyOnly));
 			switch (conf.getSecondaryFieldType()) {
 				case CustomTabConfiguration.FIELD_TYPE_USER: {
 					mSecondaryFieldLabel.setText(R.string.user);
@@ -351,13 +353,59 @@ public class CustomTabEditorActivity extends BaseSupportDialogActivity implement
 		return INTENT_ACTION_EDIT_TAB.equals(getIntent().getAction());
 	}
 
+	public static class SecondaryFieldEditTextDialogFragment extends BaseSupportDialogFragment implements
+			DialogInterface.OnClickListener {
+		private static final String FRAGMENT_TAG_EDIT_SECONDARY_FIELD = "edit_secondary_field";
+		private EditText mEditText;
+
+		@Override
+		public void onClick(final DialogInterface dialog, final int which) {
+			final FragmentActivity activity = getActivity();
+			if (activity instanceof CustomTabEditorActivity) {
+				((CustomTabEditorActivity) activity)
+						.setSecondaryFieldValue(ParseUtils.parseString(mEditText.getText()));
+			}
+		}
+
+		@Override
+		public Dialog onCreateDialog(final Bundle savedInstanceState) {
+			final Bundle args = getArguments();
+			final Context wrapped = ThemeUtils.getDialogThemedContext(getActivity());
+			final AlertDialog.Builder builder = new AlertDialog.Builder(wrapped);
+			builder.setTitle(args.getString(EXTRA_TITLE));
+			builder.setPositiveButton(android.R.string.ok, this);
+			builder.setNegativeButton(android.R.string.cancel, null);
+			final FrameLayout view = new FrameLayout(getActivity());
+			mEditText = new EditText(getActivity());
+			final FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+					FrameLayout.LayoutParams.WRAP_CONTENT);
+			lp.leftMargin = lp.topMargin = lp.bottomMargin = lp.rightMargin = getResources().getDimensionPixelSize(
+					R.dimen.element_spacing_normal);
+			view.addView(mEditText, lp);
+			builder.setView(view);
+			mEditText.setText(args.getString(EXTRA_TEXT));
+			return builder.create();
+		}
+
+		public static SecondaryFieldEditTextDialogFragment show(final FragmentActivity activity, final String text,
+				final String title) {
+			final SecondaryFieldEditTextDialogFragment f = new SecondaryFieldEditTextDialogFragment();
+			final Bundle args = new Bundle();
+			args.putString(EXTRA_TEXT, text);
+			args.putString(EXTRA_TITLE, title);
+			f.setArguments(args);
+			f.show(activity.getSupportFragmentManager(), FRAGMENT_TAG_EDIT_SECONDARY_FIELD);
+			return f;
+		}
+	}
+
 	static class CustomTabIconsAdapter extends ArrayAdapter<Entry<String, Integer>> {
 
 		private final Resources mResources;
 
 		public CustomTabIconsAdapter(final Context context) {
-			super(context, R.layout.custom_tab_icon_spinner_item);
-			setDropDownViewResource(R.layout.two_line_list_item_small);
+			super(context, R.layout.spinner_item_custom_tab_icon);
+			setDropDownViewResource(R.layout.list_item_two_line_small);
 			mResources = context.getResources();
 		}
 
@@ -404,9 +452,9 @@ public class CustomTabEditorActivity extends BaseSupportDialogActivity implement
 			final ImageView icon = (ImageView) view.findViewById(android.R.id.icon);
 			final int value = item.getValue();
 			if (value > 0) {
-				icon.setImageDrawable(new DropShadowDrawable(mResources, mResources.getDrawable(value), 2, 0x80000000));
+				ViewAccessor.setBackground(icon, mResources.getDrawable(value));
 			} else {
-				icon.setImageDrawable(null);
+				ViewAccessor.setBackground(icon, null);
 			}
 		}
 
@@ -426,51 +474,6 @@ public class CustomTabEditorActivity extends BaseSupportDialogActivity implement
 
 		}
 
-	}
-
-	static class SecondaryFieldEditTextDialogFragment extends BaseSupportDialogFragment implements
-			DialogInterface.OnClickListener {
-		private static final String FRAGMENT_TAG_EDIT_SECONDARY_FIELD = "edit_secondary_field";
-		private EditText mEditText;
-
-		@Override
-		public void onClick(final DialogInterface dialog, final int which) {
-			final FragmentActivity activity = getActivity();
-			if (activity instanceof CustomTabEditorActivity) {
-				((CustomTabEditorActivity) activity)
-						.setSecondaryFieldValue(ParseUtils.parseString(mEditText.getText()));
-			}
-		}
-
-		@Override
-		public Dialog onCreateDialog(final Bundle savedInstanceState) {
-			final Bundle args = getArguments();
-			final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-			builder.setTitle(args.getString(EXTRA_TITLE));
-			builder.setPositiveButton(android.R.string.ok, this);
-			builder.setNegativeButton(android.R.string.cancel, null);
-			final FrameLayout view = new FrameLayout(getActivity());
-			mEditText = new EditText(getActivity());
-			final FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
-					FrameLayout.LayoutParams.WRAP_CONTENT);
-			lp.leftMargin = lp.topMargin = lp.bottomMargin = lp.rightMargin = getResources().getDimensionPixelSize(
-					R.dimen.element_spacing_default);
-			view.addView(mEditText, lp);
-			builder.setView(view);
-			mEditText.setText(args.getString(EXTRA_TEXT));
-			return builder.create();
-		}
-
-		public static SecondaryFieldEditTextDialogFragment show(final FragmentActivity activity, final String text,
-				final String title) {
-			final SecondaryFieldEditTextDialogFragment f = new SecondaryFieldEditTextDialogFragment();
-			final Bundle args = new Bundle();
-			args.putString(EXTRA_TEXT, text);
-			args.putString(EXTRA_TITLE, title);
-			f.setArguments(args);
-			f.show(activity.getSupportFragmentManager(), FRAGMENT_TAG_EDIT_SECONDARY_FIELD);
-			return f;
-		}
 	}
 
 }

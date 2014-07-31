@@ -1,3 +1,22 @@
+/*
+ * 				Twidere - Twitter client for Android
+ * 
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.mariotaku.twidere.fragment;
 
 import static org.mariotaku.twidere.util.Utils.getDisplayName;
@@ -31,15 +50,16 @@ public abstract class BaseAccountPreferenceFragment extends PreferenceFragment i
 		setHasOptionsMenu(true);
 		final PreferenceManager pm = getPreferenceManager();
 		final Account account = getArguments().getParcelable(EXTRA_ACCOUNT);
-		final String pName = ACCOUNT_PREFERENCES_NAME_PREFIX + (account != null ? account.account_id : "unknown");
-		pm.setSharedPreferencesName(pName);
+		final String preferenceName = ACCOUNT_PREFERENCES_NAME_PREFIX
+				+ (account != null ? account.account_id : "unknown");
+		pm.setSharedPreferencesName(preferenceName);
 		addPreferencesFromResource(getPreferencesResource());
 		final SharedPreferences prefs = pm.getSharedPreferences();
 		prefs.registerOnSharedPreferenceChangeListener(this);
-		final String name = getDisplayName(getActivity(), account.account_id, account.name, account.screen_name);
 		final Activity activity = getActivity();
 		final Intent intent = activity.getIntent();
 		if (account != null && intent.hasExtra(PreferenceActivity.EXTRA_SHOW_FRAGMENT)) {
+			final String name = getDisplayName(getActivity(), account.account_id, account.name, account.screen_name);
 			activity.setTitle(name);
 		}
 		updatePreferenceScreen();

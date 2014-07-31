@@ -1,29 +1,29 @@
 /*
- *				Twidere - Twitter client for Android
+ * 				Twidere - Twitter client for Android
  * 
- * Copyright (C) 2012 Mariotaku Lee <mariotaku.lee@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  Copyright (C) 2012-2014 Mariotaku Lee <mariotaku.lee@gmail.com>
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.mariotaku.twidere.activity.support;
 
 import static android.text.TextUtils.isEmpty;
+import static org.mariotaku.twidere.util.ContentValuesCreator.makeAccountContentValues;
 import static org.mariotaku.twidere.util.Utils.getActivatedAccountIds;
 import static org.mariotaku.twidere.util.Utils.getNonEmptyString;
 import static org.mariotaku.twidere.util.Utils.isUserLoggedIn;
-import static org.mariotaku.twidere.util.Utils.makeAccountContentValues;
 import static org.mariotaku.twidere.util.Utils.setUserAgent;
 import static org.mariotaku.twidere.util.Utils.showErrorMessage;
 import static org.mariotaku.twidere.util.Utils.trim;
@@ -57,8 +57,6 @@ import de.keyboardsurfer.android.widget.crouton.CroutonLifecycleCallback;
 import de.keyboardsurfer.android.widget.crouton.CroutonStyle;
 
 import org.mariotaku.twidere.R;
-import org.mariotaku.twidere.activity.AuthorizeActivity;
-import org.mariotaku.twidere.activity.HomeActivity;
 import org.mariotaku.twidere.activity.SettingsActivity;
 import org.mariotaku.twidere.app.TwidereApplication;
 import org.mariotaku.twidere.fragment.support.BaseSupportDialogFragment;
@@ -70,6 +68,7 @@ import org.mariotaku.twidere.util.OAuthPasswordAuthenticator.AuthenticationExcep
 import org.mariotaku.twidere.util.OAuthPasswordAuthenticator.AuthenticityTokenException;
 import org.mariotaku.twidere.util.OAuthPasswordAuthenticator.WrongUserPassException;
 import org.mariotaku.twidere.util.ParseUtils;
+import org.mariotaku.twidere.util.ThemeUtils;
 import org.mariotaku.twidere.util.net.HttpClientImpl;
 import org.mariotaku.twidere.view.ColorPickerView;
 
@@ -128,34 +127,33 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 		switch (requestCode) {
 			case REQUEST_EDIT_API: {
 				if (resultCode == RESULT_OK) {
-					final Bundle extras = data != null ? data.getExtras() : null;
-					if (extras != null) {
-						mRestBaseURL = data.getStringExtra(Accounts.REST_BASE_URL);
-						mSigningRestBaseURL = data.getStringExtra(Accounts.SIGNING_REST_BASE_URL);
-						mOAuthBaseURL = data.getStringExtra(Accounts.OAUTH_BASE_URL);
-						mSigningOAuthBaseURL = data.getStringExtra(Accounts.SIGNING_OAUTH_BASE_URL);
-						mAuthType = data.getIntExtra(Accounts.AUTH_TYPE, Accounts.AUTH_TYPE_OAUTH);
-						mConsumerKey = data.getStringExtra(Accounts.CONSUMER_KEY);
-						mConsumerSecret = data.getStringExtra(Accounts.CONSUMER_SECRET);
-						final boolean is_twip_o_mode = mAuthType == Accounts.AUTH_TYPE_TWIP_O_MODE;
-						mUsernamePasswordContainer.setVisibility(is_twip_o_mode ? View.GONE : View.VISIBLE);
-						mSigninSignupContainer.setOrientation(is_twip_o_mode ? LinearLayout.VERTICAL
-								: LinearLayout.HORIZONTAL);
-					}
+					mRestBaseURL = data.getStringExtra(Accounts.REST_BASE_URL);
+					mSigningRestBaseURL = data.getStringExtra(Accounts.SIGNING_REST_BASE_URL);
+					mOAuthBaseURL = data.getStringExtra(Accounts.OAUTH_BASE_URL);
+					mSigningOAuthBaseURL = data.getStringExtra(Accounts.SIGNING_OAUTH_BASE_URL);
+					mAuthType = data.getIntExtra(Accounts.AUTH_TYPE, Accounts.AUTH_TYPE_OAUTH);
+					mConsumerKey = data.getStringExtra(Accounts.CONSUMER_KEY);
+					mConsumerSecret = data.getStringExtra(Accounts.CONSUMER_SECRET);
+					final boolean is_twip_o_mode = mAuthType == Accounts.AUTH_TYPE_TWIP_O_MODE;
+					mUsernamePasswordContainer.setVisibility(is_twip_o_mode ? View.GONE : View.VISIBLE);
+					mSigninSignupContainer.setOrientation(is_twip_o_mode ? LinearLayout.VERTICAL
+							: LinearLayout.HORIZONTAL);
 				}
 				setSignInButton();
 				invalidateOptionsMenu();
 				break;
 			}
 			case REQUEST_SET_COLOR: {
-				if (resultCode == BaseSupportActivity.RESULT_OK && data != null) {
-					mUserColor = data.getIntExtra(EXTRA_COLOR, Color.TRANSPARENT);
+				if (resultCode == BaseSupportActivity.RESULT_OK) {
+					mUserColor = data != null ? data.getIntExtra(EXTRA_COLOR, Color.TRANSPARENT) : null;
+				} else if (resultCode == ColorPickerDialogActivity.RESULT_CLEARED) {
+					mUserColor = null;
 				}
 				setUserColorButton();
 				break;
 			}
 			case REQUEST_BROWSER_SIGN_IN: {
-				if (resultCode == BaseSupportActivity.RESULT_OK) if (data != null && data.getExtras() != null) {
+				if (resultCode == BaseSupportActivity.RESULT_OK && data != null) {
 					doLogin(data);
 				}
 				break;
@@ -196,6 +194,8 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 				if (mUserColor != null) {
 					intent.putExtra(EXTRA_COLOR, mUserColor);
 				}
+				intent.putExtra(EXTRA_ALPHA_SLIDER, false);
+				intent.putExtra(EXTRA_CLEAR_BUTTON, true);
 				startActivityForResult(intent, REQUEST_SET_COLOR);
 				break;
 			}
@@ -247,6 +247,7 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 				break;
 			}
 			case MENU_SETTINGS: {
+				if (mTask != null && mTask.getStatus() == AsyncTask.Status.RUNNING) return false;
 				final Intent intent = new Intent(this, SettingsActivity.class);
 				startActivity(intent);
 				break;
@@ -269,7 +270,7 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 				if (mAuthType != Accounts.AUTH_TYPE_OAUTH || mTask != null
 						&& mTask.getStatus() == AsyncTask.Status.RUNNING) return false;
 				saveEditedText();
-				final Intent intent = new Intent(this, AuthorizeActivity.class);
+				final Intent intent = new Intent(this, BrowserSignInActivity.class);
 				intent.putExtra(Accounts.CONSUMER_KEY, mConsumerKey);
 				intent.putExtra(Accounts.CONSUMER_SECRET, mConsumerSecret);
 				startActivityForResult(intent, REQUEST_BROWSER_SIGN_IN);
@@ -310,7 +311,7 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 		outState.putInt(Accounts.AUTH_TYPE, mAuthType);
 		outState.putLong(EXTRA_API_LAST_CHANGE, mAPIChangeTimestamp);
 		if (mUserColor != null) {
-			outState.putInt(Accounts.USER_COLOR, mUserColor);
+			outState.putInt(Accounts.COLOR, mUserColor);
 		}
 		super.onSaveInstanceState(outState);
 	}
@@ -327,7 +328,7 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 		mPreferences = getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE);
 		mResolver = getContentResolver();
 		mApplication = TwidereApplication.getInstance(this);
-		setContentView(R.layout.sign_in);
+		setContentView(R.layout.activity_sign_in);
 		setProgressBarIndeterminateVisibility(false);
 		final long[] account_ids = getActivatedAccountIds(this);
 		getActionBar().setDisplayHomeAsUpEnabled(account_ids.length > 0);
@@ -342,8 +343,8 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 			mUsername = savedInstanceState.getString(Accounts.SCREEN_NAME);
 			mPassword = savedInstanceState.getString(Accounts.PASSWORD);
 			mAuthType = savedInstanceState.getInt(Accounts.AUTH_TYPE);
-			if (savedInstanceState.containsKey(Accounts.USER_COLOR)) {
-				mUserColor = savedInstanceState.getInt(Accounts.USER_COLOR, Color.TRANSPARENT);
+			if (savedInstanceState.containsKey(Accounts.COLOR)) {
+				mUserColor = savedInstanceState.getInt(Accounts.COLOR, Color.TRANSPARENT);
 			}
 			mAPIChangeTimestamp = savedInstanceState.getLong(EXTRA_API_LAST_CHANGE);
 		}
@@ -389,9 +390,9 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 
 	private Configuration getConfiguration() {
 		final ConfigurationBuilder cb = new ConfigurationBuilder();
-		final boolean enable_gzip_compressing = mPreferences.getBoolean(PREFERENCE_KEY_GZIP_COMPRESSING, false);
-		final boolean ignore_ssl_error = mPreferences.getBoolean(PREFERENCE_KEY_IGNORE_SSL_ERROR, false);
-		final boolean enable_proxy = mPreferences.getBoolean(PREFERENCE_KEY_ENABLE_PROXY, false);
+		final boolean enable_gzip_compressing = mPreferences.getBoolean(KEY_GZIP_COMPRESSING, false);
+		final boolean ignore_ssl_error = mPreferences.getBoolean(KEY_IGNORE_SSL_ERROR, false);
+		final boolean enable_proxy = mPreferences.getBoolean(KEY_ENABLE_PROXY, false);
 		cb.setHostAddressResolver(mApplication.getHostAddressResolver());
 		cb.setHttpClientImplementation(HttpClientImpl.class);
 		setUserAgent(this, cb);
@@ -417,8 +418,8 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 		cb.setGZIPEnabled(enable_gzip_compressing);
 		cb.setIgnoreSSLError(ignore_ssl_error);
 		if (enable_proxy) {
-			final String proxy_host = mPreferences.getString(PREFERENCE_KEY_PROXY_HOST, null);
-			final int proxy_port = ParseUtils.parseInt(mPreferences.getString(PREFERENCE_KEY_PROXY_PORT, "-1"));
+			final String proxy_host = mPreferences.getString(KEY_PROXY_HOST, null);
+			final int proxy_port = ParseUtils.parseInt(mPreferences.getString(KEY_PROXY_PORT, "-1"));
 			if (!isEmpty(proxy_host) && proxy_port > 0) {
 				cb.setHttpProxyHost(proxy_host);
 				cb.setHttpProxyPort(proxy_port);
@@ -433,43 +434,40 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 	}
 
 	private void setDefaultAPI() {
-		final long api_last_change = mPreferences.getLong(PREFERENCE_KEY_API_LAST_CHANGE, mAPIChangeTimestamp);
-		final boolean default_api_changed = api_last_change != mAPIChangeTimestamp;
-		final String consumer_key = getNonEmptyString(mPreferences, PREFERENCE_KEY_CONSUMER_KEY, TWITTER_CONSUMER_KEY_2);
-		final String consumer_secret = getNonEmptyString(mPreferences, PREFERENCE_KEY_CONSUMER_SECRET,
-				TWITTER_CONSUMER_SECRET_2);
-		final String rest_base_url = getNonEmptyString(mPreferences, PREFERENCE_KEY_REST_BASE_URL,
-				DEFAULT_REST_BASE_URL);
-		final String oauth_base_url = getNonEmptyString(mPreferences, PREFERENCE_KEY_OAUTH_BASE_URL,
-				DEFAULT_OAUTH_BASE_URL);
-		final String signing_rest_base_url = getNonEmptyString(mPreferences, PREFERENCE_KEY_SIGNING_REST_BASE_URL,
+		final long apiLastChange = mPreferences.getLong(KEY_API_LAST_CHANGE, mAPIChangeTimestamp);
+		final boolean defaultApiChanged = apiLastChange != mAPIChangeTimestamp;
+		final String consumer_key = getNonEmptyString(mPreferences, KEY_CONSUMER_KEY, TWITTER_CONSUMER_KEY_2);
+		final String consumer_secret = getNonEmptyString(mPreferences, KEY_CONSUMER_SECRET, TWITTER_CONSUMER_SECRET_2);
+		final String rest_base_url = getNonEmptyString(mPreferences, KEY_REST_BASE_URL, DEFAULT_REST_BASE_URL);
+		final String oauth_base_url = getNonEmptyString(mPreferences, KEY_OAUTH_BASE_URL, DEFAULT_OAUTH_BASE_URL);
+		final String signing_rest_base_url = getNonEmptyString(mPreferences, KEY_SIGNING_REST_BASE_URL,
 				DEFAULT_SIGNING_REST_BASE_URL);
-		final String signing_oauth_base_url = getNonEmptyString(mPreferences, PREFERENCE_KEY_SIGNING_OAUTH_BASE_URL,
+		final String signing_oauth_base_url = getNonEmptyString(mPreferences, KEY_SIGNING_OAUTH_BASE_URL,
 				DEFAULT_SIGNING_OAUTH_BASE_URL);
-		final int auth_type = mPreferences.getInt(PREFERENCE_KEY_AUTH_TYPE, Accounts.AUTH_TYPE_OAUTH);
-		if (isEmpty(mConsumerKey) || default_api_changed) {
+		final int auth_type = mPreferences.getInt(KEY_AUTH_TYPE, Accounts.AUTH_TYPE_OAUTH);
+		if (isEmpty(mConsumerKey) || defaultApiChanged) {
 			mConsumerKey = consumer_key;
 		}
-		if (isEmpty(mConsumerSecret) || default_api_changed) {
+		if (isEmpty(mConsumerSecret) || defaultApiChanged) {
 			mConsumerSecret = consumer_secret;
 		}
-		if (isEmpty(mRestBaseURL) || default_api_changed) {
+		if (isEmpty(mRestBaseURL) || defaultApiChanged) {
 			mRestBaseURL = rest_base_url;
 		}
-		if (isEmpty(mOAuthBaseURL) || default_api_changed) {
+		if (isEmpty(mOAuthBaseURL) || defaultApiChanged) {
 			mOAuthBaseURL = oauth_base_url;
 		}
-		if (isEmpty(mSigningRestBaseURL) || default_api_changed) {
+		if (isEmpty(mSigningRestBaseURL) || defaultApiChanged) {
 			mSigningRestBaseURL = signing_rest_base_url;
 		}
-		if (isEmpty(mSigningOAuthBaseURL) || default_api_changed) {
+		if (isEmpty(mSigningOAuthBaseURL) || defaultApiChanged) {
 			mSigningOAuthBaseURL = signing_oauth_base_url;
 		}
-		if (mAuthType == 0 || default_api_changed) {
+		if (mAuthType == 0 || defaultApiChanged) {
 			mAuthType = auth_type;
 		}
-		if (default_api_changed) {
-			mAPIChangeTimestamp = api_last_change;
+		if (defaultApiChanged) {
+			mAPIChangeTimestamp = apiLastChange;
 		}
 	}
 
@@ -482,7 +480,7 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 		if (mUserColor != null) {
 			mSetColorButton.setImageBitmap(ColorPickerView.getColorPreviewBitmap(this, mUserColor));
 		} else {
-			mSetColorButton.setImageResource(R.drawable.ic_menu_color_palette);
+			mSetColorButton.setImageResource(R.drawable.ic_iconic_action_color_palette);
 		}
 	}
 
@@ -559,13 +557,25 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 		}
 
 		int analyseUserProfileColor(final User user) throws TwitterException {
+			if (user == null) throw new TwitterException("Unable to get user info");
 			final HttpClientWrapper client = new HttpClientWrapper(conf);
-			final String profile_image_url = user != null ? ParseUtils.parseString(user.getProfileImageUrlHttps())
-					: null;
-			final HttpResponse conn = profile_image_url != null ? client.get(profile_image_url, null) : null;
+			final String profileImageUrl = ParseUtils.parseString(user.getProfileImageURL());
+			final HttpResponse conn = profileImageUrl != null ? client.get(profileImageUrl, null) : null;
 			final Bitmap bm = conn != null ? BitmapFactory.decodeStream(conn.asStream()) : null;
-			if (bm == null) throw new TwitterException("Can't get profile image");
-			return ColorAnalyser.analyse(bm);
+			if (bm == null) {
+				try {
+					final String profileBackgroundColor = user.getProfileBackgroundColor();
+					if (isEmpty(profileBackgroundColor)) throw new TwitterException("Can't get profile image");
+					return Color.parseColor(profileBackgroundColor);
+				} catch (final IllegalArgumentException e) {
+					throw new TwitterException("Can't get profile image");
+				}
+			}
+			try {
+				return ColorAnalyser.analyse(bm);
+			} finally {
+				bm.recycle();
+			}
 		}
 
 	}
@@ -612,7 +622,8 @@ public class SignInActivity extends BaseSupportActivity implements TwitterConsta
 
 		@Override
 		public Dialog onCreateDialog(final Bundle savedInstanceState) {
-			final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+			final Context wrapped = ThemeUtils.getDialogThemedContext(getActivity());
+			final AlertDialog.Builder builder = new AlertDialog.Builder(wrapped);
 			builder.setTitle(R.string.sign_in_method_introduction_title);
 			builder.setMessage(R.string.sign_in_method_introduction);
 			builder.setPositiveButton(android.R.string.ok, null);
